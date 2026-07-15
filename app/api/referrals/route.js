@@ -20,19 +20,19 @@ export async function POST(request) {
   if (key.length !== 10) return jsonError("Enter a valid 10-digit mobile number.");
   if (!DEPARTMENTS.includes(dept)) return jsonError("Pick a department.");
 
-  const dupSnap = await db
-    .collection("referrals")
-    .where("phoneKey", "==", key)
-    .orderBy("createdAt", "asc")
-    .limit(1)
-    .get();
+  // No orderBy here — it would need a composite index; dupes per phone are
+  // rare, so we sort the handful in memory to find the first submission.
+  const dupSnap = await db.collection("referrals").where("phoneKey", "==", key).get();
 
   if (!dupSnap.empty) {
-    const first = dupSnap.docs[0].data();
+    const firstDoc = dupSnap.docs.sort((a, b) =>
+      a.data().createdAt < b.data().createdAt ? -1 : 1
+    )[0];
+    const first = firstDoc.data();
     await notifyManagers(db, {
       dept,
       type: "duplicate",
-      referralId: dupSnap.docs[0].id,
+      referralId: firstDoc.id,
       candidateName,
       byName: user.name,
       message: `${user.name} re-submitted ${candidateName} — already referred by ${first.referrerName}. Worth a fresh look.`,
@@ -52,6 +52,7 @@ export async function POST(request) {
     referrerUid: user.uid,
     referrerName: user.name,
     referrerDept: user.dept || "",
+    referrerPhone: user.phone || "",
     stage: 0,
     out: false,
     lead: "recruiting", // new referrals default to recruiting-first contact

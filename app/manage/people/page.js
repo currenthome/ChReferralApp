@@ -10,7 +10,7 @@ export default function People() {
   const [data, setData] = useState(null);
   const [toast, setToast] = useState("");
   const [showInvite, setShowInvite] = useState(false);
-  const [inv, setInv] = useState({ name: "", email: "", dept: "", role: "employee" });
+  const [inv, setInv] = useState({ name: "", email: "", phone: "", dept: "", role: "employee" });
   const [busy, setBusy] = useState(false);
 
   const load = () => api("/api/manage/people").then(setData).catch(() => setData({ people: [], invites: [] }));
@@ -37,7 +37,7 @@ export default function People() {
       return;
     }
     act({ action: "invite", ...inv }, () => {
-      setInv({ name: "", email: "", dept: "", role: "employee" });
+      setInv({ name: "", email: "", phone: "", dept: "", role: "employee" });
       setShowInvite(false);
     });
   }
@@ -59,6 +59,8 @@ export default function People() {
               <input value={inv.name} onChange={(e) => setInv({ ...inv, name: e.target.value })} placeholder="Full name" /></div>
             <div className="field"><label>Email</label>
               <input value={inv.email} onChange={(e) => setInv({ ...inv, email: e.target.value })} placeholder="name@currenthome.com" /></div>
+            <div className="field"><label>Phone (optional)</label>
+              <input type="tel" value={inv.phone} onChange={(e) => setInv({ ...inv, phone: e.target.value })} placeholder="(000) 000-0000" /></div>
             <div className="field"><label>Department</label>
               <select value={inv.dept} onChange={(e) => setInv({ ...inv, dept: e.target.value })}>
                 <option value="">Select a department</option>
@@ -96,7 +98,7 @@ export default function People() {
             <div className="ptop">
               <div>
                 <div className="rname">{p.name}</div>
-                <div className="rmeta">{p.email} · {p.dept || "No department"}</div>
+                <div className="rmeta">{p.email} · {p.dept || "No department"}{p.phone ? ` · ${p.phone}` : ""}</div>
               </div>
               <div className="ppills">
                 <span className={`pill2 acc-${p.role}`}>{p.role === "manager" ? "Manager" : "Employee"}</span>

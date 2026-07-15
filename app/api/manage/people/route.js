@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireManager, jsonError, audit } from "@/lib/server";
-import { DEPARTMENTS } from "@/lib/constants";
+import { DEPARTMENTS, phoneKey, formatPhone } from "@/lib/constants";
 
 export async function GET(request) {
   const { db, error } = await requireManager(request);
@@ -39,9 +39,12 @@ export async function POST(request) {
     if (!email.endsWith("@currenthome.com")) return jsonError("Use a currenthome.com email.");
     if (!DEPARTMENTS.includes(body.dept)) return jsonError("Pick a department.");
     const role = body.role === "manager" ? "manager" : "employee";
+    const inviteKey = phoneKey(body.phone || "");
+    if (body.phone && inviteKey.length !== 10) return jsonError("Enter a valid 10-digit phone (or leave it blank).");
     await db.collection("invites").doc(email).set({
       name: String(body.name || "").trim(),
       dept: body.dept,
+      phone: body.phone ? formatPhone(inviteKey) : "",
       role,
       invitedBy: user.name,
       createdAt: new Date().toISOString(),
@@ -76,6 +79,15 @@ export async function POST(request) {
     await targetRef.update({ dept: body.dept });
     await audit(db, user, "people.setDept", targetUid, { email: target.email, dept: body.dept });
     return NextResponse.json({ ok: true, message: `${target.name} moved to ${body.dept}.` });
+  }
+
+  if (action === "setPhone") {
+    const key = phoneKey(body.phone || "");
+    if (body.phone && key.length !== 10) return jsonError("Enter a valid 10-digit phone.");
+    const phone = body.phone ? formatPhone(key) : "";
+    await targetRef.update({ phone });
+    await audit(db, user, "people.setPhone", targetUid, { email: target.email, phone });
+    return NextResponse.json({ ok: true, message: `${target.name}'s phone ${phone ? "updated" : "cleared"}.` });
   }
 
   if (action === "setActive") {

@@ -42,6 +42,9 @@ export default function MyReferrals() {
   });
 
   const hired = refs.filter((r) => r.stage === HIRED_STAGE && !r.out).length;
+  const conversion = refs.length ? Math.round((hired / refs.length) * 100) : 0;
+  const funnel = STAGES.map((label, i) => ({ label, count: refs.filter((r) => r.stage >= i && (!r.out || r.stage > i)).length }));
+  const funnelTop = funnel[0]?.count || 0;
 
   return (
     <Shell>
@@ -52,7 +55,29 @@ export default function MyReferrals() {
         <div className="stat"><div className="sv">{refs.length}</div><div className="sl">Referred</div></div>
         <div className="stat"><div className="sv">{hired}</div><div className="sl">Hired</div></div>
         <div className="stat"><div className="sv">{data.totalPoints}</div><div className="sl">Points</div></div>
+        <div className="stat"><div className="sv">{conversion}%</div><div className="sl">Conversion</div></div>
       </div>
+
+      {refs.length > 0 && (
+        <div className="card" style={{ marginBottom: 18 }}>
+          <h3>Your funnel</h3>
+          {funnel.map((f, i) => (
+            <div key={f.label} className="crow">
+              <div className="cn" style={{ width: 90 }}>{f.label}</div>
+              <div className="ctrack">
+                <span
+                  className="cfill"
+                  style={{
+                    width: `${funnelTop ? Math.max(4, (f.count / funnelTop) * 100) : 4}%`,
+                    ...(i === STAGES.length - 1 ? { background: "#17C964" } : {}),
+                  }}
+                />
+              </div>
+              <div className="cp">{f.count}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="sortbar">
         <select value={sort} onChange={(e) => setSort(e.target.value)}>

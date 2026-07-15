@@ -5,6 +5,43 @@ import Link from "next/link";
 import Shell from "@/components/Shell";
 import { useAuth } from "@/components/AuthProvider";
 import { api } from "@/lib/firebaseClient";
+import { DEPARTMENTS } from "@/lib/constants";
+
+function DeptPicker() {
+  const { refreshProfile } = useAuth();
+  const [dept, setDept] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function save() {
+    if (!dept) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await api("/api/me", { method: "POST", body: { dept } });
+      await refreshProfile();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="invitebox" style={{ marginBottom: 18 }}>
+      <h3>One quick thing — what team are you on?</h3>
+      {err && <div className="toast warn">{err}</div>}
+      <div style={{ display: "flex", gap: 8 }}>
+        <select value={dept} onChange={(e) => setDept(e.target.value)}>
+          <option value="">Select your department</option>
+          {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+        </select>
+        <button className="btnghost" style={{ flex: "none" }} disabled={busy || !dept} onClick={save}>Save</button>
+      </div>
+      <p className="note" style={{ textAlign: "left" }}>This sets your leaderboard and which challenges you see.</p>
+    </div>
+  );
+}
 
 function ActionButton({ href, title, sub, primary, manage }) {
   return (
@@ -35,11 +72,14 @@ export default function Home() {
   const me = rows.find((r) => r.you);
   const top = rows[0]?.points || 0;
   const firstName = (profile?.name || "").split(" ")[0];
+  const ahead = me && me.rank > 1 ? rows[me.rank - 2] : null;
 
   return (
     <Shell>
       <p className="greet">Welcome back,</p>
       <p className="greetname">{firstName || "there"}</p>
+
+      {profile && !profile.dept && <DeptPicker />}
 
       <div className="hero">
         <div>
@@ -51,6 +91,17 @@ export default function Home() {
           <div className="plbl">points this month</div>
         </div>
       </div>
+
+      {ahead && (
+        <p className="gap" style={{ fontWeight: 300, fontSize: 13, color: "var(--slate)", margin: "12px 2px 4px" }}>
+          You're <b>{ahead.points - me.points} pts</b> behind #{ahead.rank} {ahead.name.split(" ")[0]} — one referral could flip it.
+        </p>
+      )}
+      {me && me.rank === 1 && rows.length > 1 && (
+        <p className="gap" style={{ fontWeight: 300, fontSize: 13, color: "var(--slate)", margin: "12px 2px 4px" }}>
+          You're in the lead — {rows[1].name.split(" ")[0]} is {me.points - rows[1].points} pts behind you. 🏆
+        </p>
+      )}
 
       {rows.length > 0 && (
         <div className="card" style={{ marginTop: 22 }}>

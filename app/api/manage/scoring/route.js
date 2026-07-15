@@ -29,6 +29,26 @@ export async function POST(request) {
     next[key] = { ...current[key], pts: Math.round(pts), cash: Math.round(cash) };
   }
 
+  const custom = [];
+  for (const m of Array.isArray(body.custom) ? body.custom : []) {
+    const name = String(m.name || "").trim();
+    const days = Number(m.days);
+    const pts = Number(m.pts);
+    const cash = Number(m.cash ?? 0);
+    if (name.length < 2) return jsonError("Name each custom milestone.");
+    if (!Number.isInteger(days) || days < 1 || days > 3650) return jsonError(`Invalid days for ${name}.`);
+    if (!Number.isFinite(pts) || pts < 0 || pts > 100000) return jsonError(`Invalid points for ${name}.`);
+    if (!Number.isFinite(cash) || cash < 0 || cash > 100000) return jsonError(`Invalid cash for ${name}.`);
+    custom.push({
+      id: m.id && /^c\d+$/.test(m.id) ? m.id : `c${Date.now()}${custom.length}`,
+      name,
+      days,
+      pts: Math.round(pts),
+      cash: Math.round(cash),
+    });
+  }
+  next.custom = custom;
+
   await db.collection("config").doc("scoring").set(next);
   await audit(db, user, "scoring.update", "config/scoring", {
     from: {

@@ -61,7 +61,7 @@ export async function GET(request) {
     }
 
     const day30Date = addDays(r.startDate, scoring.day30.days || 30);
-    if (!r.day30Awarded && r.startAwarded !== false && today >= day30Date && (!term || term >= day30Date)) {
+    if (!r.day30Awarded && today >= day30Date && (!term || term >= day30Date)) {
       await awardPoints(db, {
         uid: r.referrerUid,
         referralId: r.id,
@@ -75,6 +75,29 @@ export async function GET(request) {
         message: `${r.candidateName} hit Day 30 — you earned ${scoring.day30.pts} points!`,
       });
       awarded.push({ id: r.id, milestone: "day30" });
+    }
+
+    // Manager-added retention milestones (Day 90, Day 180, …).
+    const customAwarded = r.customAwarded || {};
+    for (const m of scoring.custom || []) {
+      const dueDate = addDays(r.startDate, m.days);
+      if (!customAwarded[m.id] && today >= dueDate && (!term || term >= dueDate)) {
+        await awardPoints(db, {
+          uid: r.referrerUid,
+          referralId: r.id,
+          milestone: m.id,
+          label: m.name,
+          points: m.pts,
+          cash: m.cash || 0,
+        });
+        customAwarded[m.id] = true;
+        await doc.ref.update({ customAwarded });
+        await notifyReferrer(db, {
+          referral: r,
+          message: `${r.candidateName} hit ${m.name} — you earned ${m.pts} points!`,
+        });
+        awarded.push({ id: r.id, milestone: m.id });
+      }
     }
   }
 

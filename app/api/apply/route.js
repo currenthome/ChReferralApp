@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { put } from "@vercel/blob";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { phoneKey, formatPhone, DEPARTMENTS, STAGES } from "@/lib/constants";
 import { getScoring, awardPoints } from "@/lib/points";
@@ -8,12 +9,27 @@ function bad(message, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+const RESUME_TYPES = [".pdf", ".doc", ".docx"];
+const RESUME_MAX_BYTES = 4 * 1024 * 1024;
+
 // Public endpoint — a candidate applying through a rep's link/QR. No login.
+// Accepts multipart form data with an optional resume file.
 // Same duplicate rules as internal referrals: first submission wins.
 // Rate-limited per IP via a Firestore counter (serverless-safe).
 export async function POST(request) {
   const db = adminDb();
-  const body = await request.json().catch(() => ({}));
+  let body = {};
+  let resumeFile = null;
+  const contentType = request.headers.get("content-type") || "";
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData().catch(() => null);
+    if (!form) return bad("Bad request");
+    body = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === "string"));
+    const f = form.get("resume");
+    if (f && typeof f !== "string" && f.size > 0) resumeFile = f;
+  } else {
+    body = await request.json().catch(() => ({}));
+  }
 
   // Honeypot: real users never fill this hidden field.
   if (body.website) return NextResponse.json({ ok: true });
@@ -45,18 +61,17 @@ export async function POST(request) {
   }
   const referrer = referrerSnap.data();
 
-  const dupSnap = await db
-    .collection("referrals")
-    .where("phoneKey", "==", key)
-    .orderBy("createdAt", "asc")
-    .limit(1)
-    .get();
+  // No orderBy — avoids needing a composite index; sort in memory instead.
+  const dupSnap = await db.collection("referrals").where("phoneKey", "==", key).get();
 
   if (!dupSnap.empty) {
+    const firstDoc = dupSnap.docs.sort((a, b) =>
+      a.data().createdAt < b.data().createdAt ? -1 : 1
+    )[0];
     await notifyManagers(db, {
       dept,
       type: "duplicate",
-      referralId: dupSnap.docs[0].id,
+      referralId: firstDoc.id,
       candidateName,
       byName: referrer.name,
       message: `${candidateName} applied via ${referrer.name}'s link — already in the system. Worth a fresh look.`,
@@ -65,15 +80,42 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, referrerName: referrer.name });
   }
 
+  // Optional resume → private-ish storage (unguessable URL), linked on the referral.
+  let resumeUrl = "";
+  let resumeName = "";
+  if (resumeFile) {
+    const lower = (resumeFile.name || "resume").toLowerCase();
+    if (!RESUME_TYPES.some((ext) => lower.endsWith(ext))) {
+      return bad("Resume must be a PDF or Word document.");
+    }
+    if (resumeFile.size > RESUME_MAX_BYTES) {
+      return bad("Resume must be under 4 MB.");
+    }
+    try {
+      const blob = await put(`resumes/${lower.replace(/[^a-z0-9._-]/g, "_")}`, resumeFile, {
+        access: "public",
+        addRandomSuffix: true,
+      });
+      resumeUrl = blob.url;
+      resumeName = resumeFile.name;
+    } catch (err) {
+      console.error("Resume upload failed:", err.message);
+      // Application still goes through — the resume is optional.
+    }
+  }
+
   const now = new Date().toISOString();
   const ref = await db.collection("referrals").add({
     candidateName,
     candidatePhone: formatPhone(key),
     phoneKey: key,
     dept,
+    resumeUrl,
+    resumeName,
     referrerUid,
     referrerName: referrer.name,
     referrerDept: referrer.dept || "",
+    referrerPhone: referrer.phone || "",
     source: "self-apply",
     stage: 0,
     out: false,

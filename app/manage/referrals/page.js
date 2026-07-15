@@ -48,6 +48,15 @@ function Card({ r, onAction, busy }) {
 
       <div className="contactrow">
         <CallChip label="CANDIDATE" phone={r.candidatePhone} />
+        <CallChip label="REFERRER" name={r.referrerName} phone={r.referrerPhone} />
+        {r.resumeUrl && (
+          <a className="callchip" href={r.resumeUrl} target="_blank" rel="noopener">
+            <span className="cc">
+              <span className="ccl">RESUME</span>
+              <span className="ccn">{r.resumeName || "View resume"} ›</span>
+            </span>
+          </a>
+        )}
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, margin: "10px 0 2px" }}>

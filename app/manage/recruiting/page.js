@@ -71,6 +71,14 @@ export default function RecruitingQueue() {
                       <span className="ccn">{r.candidatePhone}</span>
                     </span>
                   </a>
+                  {r.resumeUrl && (
+                    <a className="callchip" href={r.resumeUrl} target="_blank" rel="noopener">
+                      <span className="cc">
+                        <span className="ccl">RESUME</span>
+                        <span className="ccn">{r.resumeName || "View resume"} ›</span>
+                      </span>
+                    </a>
+                  )}
                 </div>
 
                 <div className="stepper" style={{ marginTop: 10 }}>

@@ -19,6 +19,7 @@ export default function Apply({ params }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [dept, setDept] = useState("");
+  const [resume, setResume] = useState(null);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -40,11 +41,14 @@ export default function Apply({ params }) {
 
     setBusy(true);
     try {
-      const res = await fetch("/api/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, candidateName: name.trim(), candidatePhone: phone, dept, website: "" }),
-      });
+      const form = new FormData();
+      form.set("code", code);
+      form.set("candidateName", name.trim());
+      form.set("candidatePhone", phone);
+      form.set("dept", dept);
+      form.set("website", "");
+      if (resume) form.set("resume", resume);
+      const res = await fetch("/api/apply", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong.");
       setDone(true);
@@ -119,6 +123,12 @@ export default function Apply({ params }) {
                 {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
               </select>
               {errors.dept && <div className="err">Pick a team.</div>}
+            </div>
+
+            <div className="field">
+              <label>Resume (optional)</label>
+              <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setResume(e.target.files?.[0] || null)} />
+              {resume && <div className="note" style={{ textAlign: "left", marginTop: 6 }}>Attached: {resume.name}</div>}
             </div>
 
             <button className="btn" onClick={submit} disabled={busy}>
