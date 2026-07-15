@@ -151,6 +151,10 @@ input.bad,select.bad{border-color:var(--err);}
 .bb.active{color:var(--cyan);}
 body.hasbar{padding-bottom:76px;}
 .spinner{text-align:center;padding:60px 20px;font-weight:300;color:var(--slate);}
+.crumbs{font-weight:300;font-size:13px;color:var(--slate);margin:-6px 0 18px;white-space:nowrap;overflow-x:auto;}
+.crumbs a{display:inline-block;font-weight:500;color:var(--slate);text-decoration:none;padding:6px 0;}
+.csep{margin:0 8px;color:#b8bcc6;}
+.chere{font-weight:700;color:var(--charcoal);}
 @media(min-width:900px){
   .wrap.wide{max-width:1060px;padding-left:28px;padding-right:28px;}
   .cardgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}

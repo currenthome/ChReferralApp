@@ -35,6 +35,53 @@ function Bell() {
   );
 }
 
+// Cumulative-path labels for the breadcrumb trail. Pages not listed
+// (login, public apply) don't render Shell, so they never show crumbs.
+const CRUMBS = {
+  "/home": "Home",
+  "/submit": "Submit",
+  "/my-referrals": "My referrals",
+  "/earnings": "Earnings",
+  "/prizes": "Prizes & goals",
+  "/share": "Share & recruit",
+  "/leaderboard": "Leaderboard",
+  "/notifications": "Notifications",
+  "/manage": "Manage",
+  "/manage/referrals": "Referrals",
+  "/manage/recruiting": "Recruiting",
+  "/manage/pipeline": "Pipeline",
+  "/manage/report": "Reporting",
+  "/manage/people": "People",
+  "/manage/scoring": "Scoring",
+  "/manage/prizes": "Prizes",
+  "/manage/hires": "Hires",
+};
+
+function Crumbs({ pathname }) {
+  if (!pathname || pathname === "/home") return null;
+  const trail = [{ href: "/home", label: "Home" }];
+  let acc = "";
+  for (const part of pathname.split("/").filter(Boolean)) {
+    acc += `/${part}`;
+    if (CRUMBS[acc]) trail.push({ href: acc, label: CRUMBS[acc] });
+  }
+  if (trail.length < 2) return null;
+  return (
+    <nav className="crumbs" aria-label="Breadcrumb">
+      {trail.map((c, i) =>
+        i < trail.length - 1 ? (
+          <span key={c.href}>
+            <Link href={c.href}>{c.label}</Link>
+            <span className="csep">›</span>
+          </span>
+        ) : (
+          <span key={c.href} className="chere">{c.label}</span>
+        )
+      )}
+    </nav>
+  );
+}
+
 const NAV = [
   { href: "/home", label: "Home", icon: <><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></> },
   { href: "/submit", label: "Submit", icon: <><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></> },
@@ -68,7 +115,10 @@ export default function Shell({ children, wide = false, nav = true }) {
         </Link>
         <Bell />
       </div>
-      <div className={wide ? "wrap wide" : "wrap"}>{children}</div>
+      <div className={wide ? "wrap wide" : "wrap"}>
+        <Crumbs pathname={pathname} />
+        {children}
+      </div>
       {nav && (
         <nav className="botbar">
           {NAV.map((n) => (
