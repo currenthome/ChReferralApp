@@ -42,7 +42,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, message: "Prize removed." });
   }
 
-  const reward = String(body.reward || "").trim();
+  const reward = String(body.reward || "").trim().slice(0, 200);
   const type = body.type === "Target" ? "Target" : "Race";
   const metric = ["hires", "points", "referrals", "cash"].includes(body.metric) ? body.metric : "hires";
   const target = Number(body.target) || 0;

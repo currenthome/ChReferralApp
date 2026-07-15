@@ -42,7 +42,7 @@ export async function POST(request) {
     const inviteKey = phoneKey(body.phone || "");
     if (body.phone && inviteKey.length !== 10) return jsonError("Enter a valid 10-digit phone (or leave it blank).");
     await db.collection("invites").doc(email).set({
-      name: String(body.name || "").trim(),
+      name: String(body.name || "").trim().slice(0, 100),
       dept: body.dept,
       phone: body.phone ? formatPhone(inviteKey) : "",
       role,

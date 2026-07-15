@@ -34,7 +34,8 @@ export async function POST(request) {
   // Honeypot: real users never fill this hidden field.
   if (body.website) return NextResponse.json({ ok: true });
 
-  const ip = (request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
+  // x-real-ip is set by Vercel's edge and can't be spoofed by the client.
+  const ip = request.headers.get("x-real-ip") || (request.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
   const day = new Date().toISOString().slice(0, 10);
   const rlRef = db.collection("rateLimits").doc(`${day}_${ip.replace(/[^0-9a-fA-F.:]/g, "")}`);
   const rl = await rlRef.get();
@@ -42,8 +43,8 @@ export async function POST(request) {
   if (count >= 10) return bad("Too many applications from this network today. Try again tomorrow.", 429);
   await rlRef.set({ count: count + 1, at: new Date().toISOString() });
 
-  const code = String(body.code || "").trim().toUpperCase();
-  const candidateName = String(body.candidateName || "").trim();
+  const code = String(body.code || "").trim().toUpperCase().slice(0, 32);
+  const candidateName = String(body.candidateName || "").trim().slice(0, 100);
   const key = phoneKey(body.candidatePhone);
   const dept = String(body.dept || "").trim();
 

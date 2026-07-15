@@ -12,7 +12,7 @@ export async function POST(request) {
   if (error) return error;
 
   const body = await request.json().catch(() => ({}));
-  const candidateName = String(body.candidateName || "").trim();
+  const candidateName = String(body.candidateName || "").trim().slice(0, 100);
   const key = phoneKey(body.candidatePhone);
   const dept = String(body.dept || "").trim();
 
