@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# next.js build output
+.next/
+out/
+
+# environment / secrets — never commit these
+.env
+.env.*
+!.env.example
+*service-account*.json
+
+# vercel
+.vercel/
+
+# misc
+.DS_Store
+*.log
