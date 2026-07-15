@@ -87,9 +87,10 @@ export async function POST(request, { params }) {
   if (update.lead) details.lead = update.lead;
   await audit(db, user, `referral.${action}`, id, details);
 
-  // Bare, non-sensitive update to the referrer, per the locked spec.
+  // Bare, non-sensitive update to the referrer — in-app bell only, no email
+  // (Skip's call: emails go out on submission, not pipeline moves).
   if (note && ["advance", "out", "reopen"].includes(action)) {
-    await notifyReferrer(db, { referral: r, message: note });
+    await notifyReferrer(db, { referral: r, message: note, email: false });
   }
 
   return NextResponse.json({ ok: true, message: note || "Updated." });
