@@ -50,6 +50,30 @@ function Card({ r, onAction, busy }) {
         <CallChip label="CANDIDATE" phone={r.candidatePhone} />
       </div>
 
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, margin: "10px 0 2px" }}>
+        <span style={{
+          fontWeight: 700, fontSize: 9.5, letterSpacing: 1, padding: "4px 9px", borderRadius: 999,
+          ...(r.lead === "recruiting" ? { background: "#efe9ff", color: "#5b3fbf" } : { background: "var(--cyanlight)", color: "#0a7d8f" }),
+        }}>
+          {r.lead === "recruiting" ? "RECRUITING-LED" : "MANAGER-LED"}
+        </span>
+        {r.ownerName ? (
+          <span style={{ fontWeight: 300, fontSize: 12, color: "var(--slate)" }}>
+            Worked by <b style={{ fontWeight: 700, color: "var(--charcoal)" }}>{r.ownerName}</b>
+          </span>
+        ) : (
+          !r.out && r.stage < HIRED_STAGE && (
+            <button
+              onClick={() => onAction(r, "claim")}
+              disabled={busy}
+              style={{ fontFamily: "inherit", fontWeight: 700, fontSize: 11, padding: "4px 10px", borderRadius: 8, border: "1px solid var(--cyan)", background: "var(--cyanlight)", color: "#0a7d8f", cursor: "pointer" }}
+            >
+              Assign to me
+            </button>
+          )
+        )}
+      </div>
+
       <div className="stepper" style={{ marginTop: 10 }}>
         {STAGES.map((s, i) => (
           <div key={s} className={`seg${i <= r.stage ? (r.out ? " out" : r.stage === HIRED_STAGE ? " hired" : " on") : ""}`} />
@@ -72,6 +96,9 @@ function Card({ r, onAction, busy }) {
           )}
           <button className="mlink" disabled={busy} onClick={() => onAction(r, "out")}>
             Mark not moving forward
+          </button>
+          <button className="mlink" disabled={busy} onClick={() => onAction(r, "setLead", { lead: r.lead === "recruiting" ? "manager" : "recruiting" })}>
+            {r.lead === "recruiting" ? "Jump in — I'll take the lead" : "Hand to recruiting"}
           </button>
         </>
       )}

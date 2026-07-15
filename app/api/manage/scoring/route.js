@@ -19,16 +19,24 @@ export async function POST(request) {
 
   for (const key of ["submit", "start", "day30"]) {
     const pts = Number(body?.[key]?.pts);
+    const cash = Number(body?.[key]?.cash ?? 0);
     if (!Number.isFinite(pts) || pts < 0 || pts > 100000) {
       return jsonError(`Invalid points for ${key}.`);
     }
-    next[key] = { ...current[key], pts: Math.round(pts) };
+    if (!Number.isFinite(cash) || cash < 0 || cash > 100000) {
+      return jsonError(`Invalid cash amount for ${key}.`);
+    }
+    next[key] = { ...current[key], pts: Math.round(pts), cash: Math.round(cash) };
   }
 
   await db.collection("config").doc("scoring").set(next);
   await audit(db, user, "scoring.update", "config/scoring", {
-    from: { submit: current.submit.pts, start: current.start.pts, day30: current.day30.pts },
-    to: { submit: next.submit.pts, start: next.start.pts, day30: next.day30.pts },
+    from: {
+      submit: current.submit, start: current.start, day30: current.day30,
+    },
+    to: {
+      submit: next.submit, start: next.start, day30: next.day30,
+    },
   });
 
   return NextResponse.json({ ok: true, scoring: next, message: "Scoring updated." });

@@ -50,6 +50,7 @@ export async function GET(request) {
         referralId: r.id,
         milestone: "start",
         points: scoring.start.pts,
+        cash: scoring.start.cash || 0,
       });
       await doc.ref.update({ startAwarded: true });
       await notifyReferrer(db, {
@@ -66,6 +67,7 @@ export async function GET(request) {
         referralId: r.id,
         milestone: "day30",
         points: scoring.day30.pts,
+        cash: scoring.day30.cash || 0,
       });
       await doc.ref.update({ day30Awarded: true });
       await notifyReferrer(db, {

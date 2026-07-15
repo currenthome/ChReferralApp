@@ -39,7 +39,7 @@ export default function Scoring() {
       <ManagerGuard>
         <h1>Scoring & milestones</h1>
         <p className="sub" style={{ marginBottom: 18 }}>
-          Points for each milestone. Changes apply going forward and every change is logged.
+          Points and cash payout for each milestone. Cash of $0 means points only. Changes apply going forward and every change is logged.
         </p>
         {toast && <div className="toast">{toast}</div>}
         {!scoring && <div className="spinner">Loading…</div>}
@@ -56,6 +56,14 @@ export default function Scoring() {
                   type="number"
                   value={scoring[key].pts}
                   onChange={(e) => setScoring({ ...scoring, [key]: { ...scoring[key], pts: e.target.value } })}
+                />
+              </div>
+              <div className="mfield">
+                <span className="mflbl">CASH $</span>
+                <input
+                  type="number"
+                  value={scoring[key].cash ?? 0}
+                  onChange={(e) => setScoring({ ...scoring, [key]: { ...scoring[key], cash: e.target.value } })}
                 />
               </div>
             </div>

@@ -53,19 +53,39 @@ export async function POST(request, { params }) {
     note = `${r.candidateName}'s start date is set — points award automatically from their first day.`;
   } else if (action === "setLead") {
     update.lead = body.lead === "manager" ? "manager" : "recruiting";
+    update.ownerUid = body.lead === "manager" ? user.uid : "";
     update.ownerName = body.lead === "manager" ? user.name : "";
+    delete update.stageChangedAt; // routing isn't a stage change
     note = "";
+  } else if (action === "claim") {
+    update.ownerUid = user.uid;
+    update.ownerName = user.name;
+    delete update.stageChangedAt;
+    note = `You're now working ${r.candidateName}.`;
+  } else if (action === "nudge") {
+    delete update.stageChangedAt;
+    const days = Math.floor((Date.now() - new Date(r.stageChangedAt).getTime()) / 86400000);
+    const { notifyManagers } = await import("@/lib/notify");
+    await notifyManagers(db, {
+      dept: r.dept,
+      type: "nudge",
+      referralId: id,
+      candidateName: r.candidateName,
+      byName: user.name,
+      message: `Nudge from ${user.name}: ${r.candidateName} has been sitting ${days} day${days === 1 ? "" : "s"} at “${STAGES[r.stage]}” — please take action.`,
+    });
+    note = `Nudge sent to ${r.dept} managers.`;
   } else {
     return jsonError("Unknown action");
   }
 
-  await ref.update(update);
-  await audit(db, user, `referral.${action}`, id, {
-    candidateName: r.candidateName,
-    from: STAGES[r.stage],
-    to: update.stage !== undefined ? STAGES[update.stage] : undefined,
-    startDate: update.startDate,
-  });
+  if (Object.keys(update).length) await ref.update(update);
+
+  const details = { candidateName: r.candidateName, from: STAGES[r.stage] };
+  if (update.stage !== undefined) details.to = STAGES[update.stage];
+  if (update.startDate) details.startDate = update.startDate;
+  if (update.lead) details.lead = update.lead;
+  await audit(db, user, `referral.${action}`, id, details);
 
   // Bare, non-sensitive update to the referrer, per the locked spec.
   if (note && ["advance", "out", "reopen"].includes(action)) {

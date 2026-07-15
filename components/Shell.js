@@ -39,7 +39,8 @@ const NAV = [
   { href: "/home", label: "Home", icon: <><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></> },
   { href: "/submit", label: "Submit", icon: <><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></> },
   { href: "/my-referrals", label: "Refs", icon: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /> },
-  { href: "/leaderboard", label: "Board", icon: <><path d="M12 21V11" /><path d="M6 21v-6" /><path d="M18 21v-14" /></> },
+  { href: "/earnings", label: "Earnings", icon: <><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></> },
+  { href: "/share", label: "Share", icon: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></> },
 ];
 
 export default function Shell({ children, wide = false, nav = true }) {

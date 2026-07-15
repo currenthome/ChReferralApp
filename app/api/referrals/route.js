@@ -70,6 +70,7 @@ export async function POST(request) {
     referralId: ref.id,
     milestone: "submit",
     points: scoring.submit.pts,
+    cash: scoring.submit.cash || 0,
   });
 
   await audit(db, user, "referral.submit", ref.id, { candidateName, dept });

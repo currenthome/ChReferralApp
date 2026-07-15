@@ -69,6 +69,9 @@ export default function Home() {
 
       <ActionButton primary href="/submit" title="Submit a referral" sub="Know someone great? Add them in seconds." />
       <ActionButton href="/my-referrals" title="My referrals" sub="Track everyone you've referred and their status." />
+      <ActionButton href="/earnings" title="My earnings" sub="See cash earned and what's still in your pipeline." />
+      <ActionButton href="/prizes" title="Prizes & goals" sub="See what you can win and how close you are." />
+      <ActionButton href="/share" title="Share & recruit" sub="Get your personal link and QR code to post." />
       <ActionButton href="/leaderboard" title="Leaderboard" sub="See how you stack up against the team." />
       {profile?.role === "manager" && (
         <ActionButton manage href="/manage" title="Manage" sub="Update funnel stages, invite and manage people." />

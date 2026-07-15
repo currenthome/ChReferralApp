@@ -6,8 +6,13 @@ import ManagerGuard from "@/components/ManagerGuard";
 
 const TOOLS = [
   { href: "/manage/referrals", title: "Update referrals", sub: "Move candidates through the funnel.", primary: true },
+  { href: "/manage/recruiting", title: "Recruiting queue", sub: "First-contact referrals waiting on a pre-screen." },
+  { href: "/manage/pipeline", title: "Company pipeline", sub: "Every referral, all departments — monitor and nudge." },
+  { href: "/manage/report", title: "Reporting", sub: "Funnel, conversions, hires, and rep performance." },
   { href: "/manage/people", title: "People", sub: "Add teammates, change access, activate or deactivate." },
-  { href: "/manage/scoring", title: "Scoring & milestones", sub: "Points for Submit, Start, and Day 30." },
+  { href: "/manage/scoring", title: "Scoring & milestones", sub: "Points and cash for Submit, Start, and Day 30." },
+  { href: "/manage/prizes", title: "Prizes & goals", sub: "Create races and targets for your team." },
+  { href: "/manage/hires", title: "Hires & month-end", sub: "Terminations, milestone clocks, and the month freeze." },
 ];
 
 export default function Manage() {
