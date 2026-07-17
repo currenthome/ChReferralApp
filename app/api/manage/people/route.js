@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireManager, jsonError, audit } from "@/lib/server";
 import { DEPARTMENTS, phoneKey, formatPhone } from "@/lib/constants";
+import { sendMail } from "@/lib/mail";
 
 export async function GET(request) {
   const { db, error } = await requireManager(request);
@@ -41,8 +42,9 @@ export async function POST(request) {
     const role = body.role === "manager" ? "manager" : "employee";
     const inviteKey = phoneKey(body.phone || "");
     if (body.phone && inviteKey.length !== 10) return jsonError("Enter a valid 10-digit phone (or leave it blank).");
+    const name = String(body.name || "").trim().slice(0, 100);
     await db.collection("invites").doc(email).set({
-      name: String(body.name || "").trim().slice(0, 100),
+      name,
       dept: body.dept,
       phone: body.phone ? formatPhone(inviteKey) : "",
       role,
@@ -50,9 +52,24 @@ export async function POST(request) {
       createdAt: new Date().toISOString(),
     });
     await audit(db, user, "people.invite", email, { dept: body.dept, role });
+
+    const base = process.env.NEXT_PUBLIC_APP_URL || "https://ch-referral-app.vercel.app";
+    const mail = await sendMail({
+      to: [email],
+      subject: "You're invited to the Current Home Referral Program",
+      text:
+        `Hi ${name || "there"},\n\n` +
+        `${user.name} added you to the Current Home referral platform.\n\n` +
+        `Sign in with your Current Home Google account — no separate password needed:\n` +
+        `${base}/login\n\n` +
+        `Refer great people, track your referrals, and earn rewards.`,
+    });
+
     return NextResponse.json({
       ok: true,
-      message: `${email} is set up as ${role} in ${body.dept} — they just sign in with Google.`,
+      message: mail.sent
+        ? `${email} is set up as ${role} in ${body.dept} — invite email sent.`
+        : `${email} is set up as ${role} in ${body.dept} — they just sign in with Google. (Invite email didn't go out.)`,
     });
   }
 

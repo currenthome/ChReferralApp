@@ -47,7 +47,7 @@ export default function People() {
       <ManagerGuard>
         <h1>People</h1>
         <p className="sub" style={{ marginBottom: 18 }}>
-          Add teammates and manage their access. New people just sign in with their Current Home Google account.
+          Add teammates and manage their access. New people get an email with a sign-in link — they log in with their Current Home Google account.
         </p>
         {toast && <div className="toast">{toast}</div>}
 
