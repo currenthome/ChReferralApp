@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { del } from "@vercel/blob";
 import { requireManager, jsonError, audit } from "@/lib/server";
 import { STAGES, HIRED_STAGE } from "@/lib/constants";
-import { notifyReferrer } from "@/lib/notify";
+import { notifyReferrer, notifyHiredDistros } from "@/lib/notify";
+import { getScoring } from "@/lib/points";
 
 // Stage actions: advance, back, out (not moving forward), reopen, setStart.
 // Points are awarded by the daily cron when start/day-30 dates arrive —
@@ -92,6 +93,11 @@ export async function POST(request, { params }) {
   // (Skip's call: emails go out on submission, not pipeline moves).
   if (note && ["advance", "out", "reopen"].includes(action)) {
     await notifyReferrer(db, { referral: r, message: note, email: false });
+  }
+
+  // Reaching Hired emails the payout distros with the reward schedule.
+  if (action === "advance" && update.stage === HIRED_STAGE) {
+    await notifyHiredDistros({ referral: r, scoring: await getScoring(db) });
   }
 
   return NextResponse.json({ ok: true, message: note || "Updated." });

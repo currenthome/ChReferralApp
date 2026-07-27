@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { getScoring, awardPoints } from "@/lib/points";
-import { notifyReferrer } from "@/lib/notify";
+import { notifyReferrer, notifyDay30Distros } from "@/lib/notify";
 import { HIRED_STAGE, COMPANY_TZ } from "@/lib/constants";
 
 function todayCompanyDate() {
@@ -74,6 +74,7 @@ export async function GET(request) {
         referral: r,
         message: `${r.candidateName} hit Day 30 — you earned ${scoring.day30.pts} points!`,
       });
+      await notifyDay30Distros({ referral: r, scoring });
       awarded.push({ id: r.id, milestone: "day30" });
     }
 
