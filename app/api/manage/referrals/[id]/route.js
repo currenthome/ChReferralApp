@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { del } from "@vercel/blob";
 import { requireManager, jsonError, audit } from "@/lib/server";
 import { STAGES, HIRED_STAGE } from "@/lib/constants";
 import { notifyReferrer } from "@/lib/notify";
@@ -94,4 +95,43 @@ export async function POST(request, { params }) {
   }
 
   return NextResponse.json({ ok: true, message: note || "Updated." });
+}
+
+// Permanently removes a submission and everything tied to it: points events
+// (so the leaderboard and earnings drop them), bell notifications, and the
+// uploaded resume. The audit log keeps a record of who deleted what.
+export async function DELETE(request, { params }) {
+  const { user, db, error } = await requireManager(request);
+  if (error) return error;
+
+  const { id } = await params;
+  const ref = db.collection("referrals").doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) return jsonError("Referral not found", 404);
+  const r = snap.data();
+
+  const batch = db.batch();
+  const pointsSnap = await db.collection("pointsEvents").where("referralId", "==", id).get();
+  pointsSnap.docs.forEach((d) => batch.delete(d.ref));
+  const notifSnap = await db.collection("notifications").where("referralId", "==", id).get();
+  notifSnap.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(ref);
+  await batch.commit();
+
+  if (r.resumeUrl) {
+    try {
+      await del(r.resumeUrl);
+    } catch {
+      // Blob may already be gone; the submission itself is deleted either way.
+    }
+  }
+
+  await audit(db, user, "referral.delete", id, {
+    candidateName: r.candidateName,
+    referrerName: r.referrerName,
+    stage: STAGES[r.stage],
+    pointsEventsRemoved: pointsSnap.size,
+  });
+
+  return NextResponse.json({ ok: true, message: `${r.candidateName}'s submission was deleted.` });
 }

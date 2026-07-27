@@ -25,7 +25,7 @@ function CallChip({ label, name, phone }) {
   );
 }
 
-function Card({ r, onAction, busy }) {
+function Card({ r, onAction, onDelete, busy }) {
   const [startDate, setStartDate] = useState(r.startDate || "");
   const inStage = daysSince(r.stageChangedAt);
   const since = daysSince(r.createdAt);
@@ -137,6 +137,10 @@ function Card({ r, onAction, busy }) {
           Reopen at “{STAGES[r.stage]}”
         </button>
       )}
+
+      <button className="mlink" style={{ color: "#c0392b" }} disabled={busy} onClick={() => onDelete(r)}>
+        Delete submission
+      </button>
     </div>
   );
 }
@@ -156,6 +160,24 @@ export default function ManageReferrals() {
     try {
       const res = await api(`/api/manage/referrals/${r.id}`, { method: "POST", body: { action, ...extra } });
       setToast(res.message || "Updated.");
+      await load();
+    } catch (e) {
+      setToast(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDelete(r) {
+    const ok = window.confirm(
+      `Delete ${r.candidateName}'s submission? This also removes any points it earned. It can't be undone.`
+    );
+    if (!ok) return;
+    setBusy(true);
+    setToast("");
+    try {
+      const res = await api(`/api/manage/referrals/${r.id}`, { method: "DELETE" });
+      setToast(res.message || "Deleted.");
       await load();
     } catch (e) {
       setToast(e.message);
@@ -191,7 +213,7 @@ export default function ManageReferrals() {
         {data && refs.length === 0 && <p className="note" style={{ textAlign: "left" }}>Nothing here yet.</p>}
         <div className="cardgrid">
           {refs.map((r) => (
-            <Card key={r.id} r={r} onAction={onAction} busy={busy} />
+            <Card key={r.id} r={r} onAction={onAction} onDelete={onDelete} busy={busy} />
           ))}
         </div>
       </ManagerGuard>
