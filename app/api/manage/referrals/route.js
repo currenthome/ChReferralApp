@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireManager } from "@/lib/server";
 
-// All referrals for manager screens. Default scope: own department, anything
-// they referred, plus view-only rows for referrals their department's people
-// sent to other departments. Recruiting-department managers see everything.
+// All referrals for manager screens. A referral is always visible to its
+// referrer's department, wherever the candidate went; the candidate's own
+// department is who works it. Recruiting-department managers see everything.
 // scope=company returns the whole pipeline (recruiting oversight view).
 export async function GET(request) {
   const { user, db, error } = await requireManager(request);
@@ -34,16 +34,17 @@ export async function GET(request) {
     .map((r) => ({
       ...r,
       points: pointsByReferral[r.id] || 0,
-      // Submitted by this manager's team into another department: visible
-      // here, but the hiring department owns the stage moves.
-      teamView:
-        !seesAll &&
-        !!user.dept &&
-        r.dept !== user.dept &&
-        r.referrerUid !== user.uid &&
-        deptByUid[r.referrerUid] === user.dept,
+      // Seeing and working are different rights: the candidate's department
+      // moves them through the funnel; everyone connected still sees them.
+      canWork: seesAll || r.dept === user.dept,
     }))
-    .filter((r) => seesAll || r.dept === user.dept || r.referrerUid === user.uid || r.teamView)
+    .filter(
+      (r) =>
+        seesAll ||
+        r.dept === user.dept ||
+        r.referrerUid === user.uid ||
+        (!!user.dept && deptByUid[r.referrerUid] === user.dept)
+    )
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   return NextResponse.json({ referrals, seesAll: user.dept === "Recruiting" });

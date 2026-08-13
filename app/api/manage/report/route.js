@@ -3,9 +3,9 @@ import { requireManager } from "@/lib/server";
 import { STAGES, HIRED_STAGE } from "@/lib/constants";
 
 // Campaign reporting: funnel, conversions, hires, rep quality.
-// Any manager can view any department or company-wide. Two views:
-//   hiring — candidates referred INTO the department (default)
-//   team   — referrals submitted BY the department's people, wherever they went
+// Any manager can view any department or company-wide. A department's report
+// covers every referral connected to it: candidates for its jobs AND
+// referrals its own people made, wherever the candidate went.
 export async function GET(request) {
   const { user, db, error } = await requireManager(request);
   if (error) return error;
@@ -13,7 +13,6 @@ export async function GET(request) {
   const url = new URL(request.url);
   const days = Number(url.searchParams.get("days")) || 0; // 0 = all time
   const dept = url.searchParams.get("dept") || "Company";
-  const view = url.searchParams.get("view") === "team" ? "team" : "hiring";
 
   const since = days ? new Date(Date.now() - days * 86400000).toISOString() : "";
 
@@ -22,19 +21,15 @@ export async function GET(request) {
     db.collection("users").get(),
   ]);
 
-  // Team view keys off the referrer's *current* department — the snapshot
-  // stored on the referral can be blank or stale.
+  // Match on the referrer's *current* department — the snapshot stored on
+  // the referral can be blank or stale.
   const deptByUid = {};
   usersSnap.docs.forEach((d) => (deptByUid[d.id] = d.data().dept || ""));
 
   const referrals = snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((r) => r.createdAt >= since)
-    .filter((r) => {
-      if (dept === "Company") return true;
-      if (view === "team") return deptByUid[r.referrerUid] === dept;
-      return r.dept === dept;
-    });
+    .filter((r) => dept === "Company" || r.dept === dept || deptByUid[r.referrerUid] === dept);
 
   // Funnel: how many referrals reached each stage (cumulative).
   const funnel = STAGES.map((label, i) => ({
@@ -72,7 +67,6 @@ export async function GET(request) {
   return NextResponse.json({
     dept,
     days,
-    view,
     headline: {
       submitted,
       hires,
