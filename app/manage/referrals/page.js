@@ -41,7 +41,10 @@ function Card({ r, onAction, onDelete, busy }) {
       <div className="rtop">
         <div>
           <div className="rname">{r.candidateName}</div>
-          <div className="rmeta">{r.dept} · referred by {r.referrerName}</div>
+          <div className="rmeta">
+            {r.dept} · referred by {r.referrerName}
+            {r.teamView ? ` · ${r.points} pts earned` : ""}
+          </div>
         </div>
         <span className={`badge ${badge.cls}`}>{badge.label}</span>
       </div>
@@ -66,12 +69,17 @@ function Card({ r, onAction, onDelete, busy }) {
         }}>
           {r.lead === "recruiting" ? "RECRUITING-LED" : "MANAGER-LED"}
         </span>
+        {r.teamView && (
+          <span style={{ fontWeight: 700, fontSize: 9.5, letterSpacing: 1, padding: "4px 9px", borderRadius: 999, background: "#eceef2", color: "var(--slate)" }}>
+            YOUR TEAM — VIEW ONLY
+          </span>
+        )}
         {r.ownerName ? (
           <span style={{ fontWeight: 300, fontSize: 12, color: "var(--slate)" }}>
             Worked by <b style={{ fontWeight: 700, color: "var(--charcoal)" }}>{r.ownerName}</b>
           </span>
         ) : (
-          !r.out && r.stage < HIRED_STAGE && (
+          !r.teamView && !r.out && r.stage < HIRED_STAGE && (
             <button
               onClick={() => onAction(r, "claim")}
               disabled={busy}
@@ -93,7 +101,7 @@ function Card({ r, onAction, onDelete, busy }) {
         <b>{inStage}d</b> in stage · <b>{since}d</b> since submitted
       </div>
 
-      {!r.out && r.stage < HIRED_STAGE && (
+      {!r.teamView && !r.out && r.stage < HIRED_STAGE && (
         <>
           <button className="btn" style={{ marginTop: 14, padding: 13 }} disabled={busy} onClick={() => onAction(r, "advance")}>
             Advance to “{STAGES[r.stage + 1]}”
@@ -112,7 +120,7 @@ function Card({ r, onAction, onDelete, busy }) {
         </>
       )}
 
-      {!r.out && r.stage === HIRED_STAGE && (
+      {!r.teamView && !r.out && r.stage === HIRED_STAGE && (
         <div className="startrow">
           <label>Start date {r.startDate ? "(set)" : "— points award from their first day"}</label>
           <div style={{ display: "flex", gap: 8 }}>
@@ -132,15 +140,17 @@ function Card({ r, onAction, onDelete, busy }) {
         </div>
       )}
 
-      {r.out && (
+      {!r.teamView && r.out && (
         <button className="mlink" disabled={busy} onClick={() => onAction(r, "reopen")}>
           Reopen at “{STAGES[r.stage]}”
         </button>
       )}
 
-      <button className="mlink" style={{ color: "#c0392b" }} disabled={busy} onClick={() => onDelete(r)}>
-        Delete submission
-      </button>
+      {!r.teamView && (
+        <button className="mlink" style={{ color: "#c0392b" }} disabled={busy} onClick={() => onDelete(r)}>
+          Delete submission
+        </button>
+      )}
     </div>
   );
 }
@@ -190,6 +200,7 @@ export default function ManageReferrals() {
     if (filter === "open") return !r.out && r.stage < HIRED_STAGE;
     if (filter === "hired") return r.stage === HIRED_STAGE && !r.out;
     if (filter === "out") return r.out;
+    if (filter === "team") return r.teamView;
     return true;
   });
 
@@ -199,6 +210,7 @@ export default function ManageReferrals() {
         <h1>Update referrals</h1>
         <p className="sub" style={{ marginBottom: 18 }}>
           Move candidates through the funnel. Each change updates the referrer and awards points automatically.
+          Referrals your team sent to other departments show here too — view-only, with the points they've earned.
         </p>
         {toast && <div className="toast">{toast}</div>}
         <div className="sortbar">
@@ -207,6 +219,7 @@ export default function ManageReferrals() {
             <option value="open">In progress</option>
             <option value="hired">Hired</option>
             <option value="out">Not moving forward</option>
+            <option value="team">My team's referrals (view-only)</option>
           </select>
         </div>
         {!data && <div className="spinner">Loading…</div>}

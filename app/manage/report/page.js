@@ -9,14 +9,15 @@ import { DEPARTMENTS } from "@/lib/constants";
 export default function Report() {
   const [days, setDays] = useState(30);
   const [dept, setDept] = useState("Company");
+  const [view, setView] = useState("hiring");
   const [data, setData] = useState(null);
 
   useEffect(() => {
     setData(null);
-    api(`/api/manage/report?days=${days}&dept=${encodeURIComponent(dept)}`)
+    api(`/api/manage/report?days=${days}&dept=${encodeURIComponent(dept)}&view=${view}`)
       .then(setData)
       .catch(() => setData({ headline: {}, funnel: [], conversions: [], reps: [] }));
-  }, [days, dept]);
+  }, [days, dept, view]);
 
   const top = data?.funnel?.[0]?.count || 0;
   const cards = data
@@ -37,20 +38,20 @@ export default function Report() {
         </p>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
+          <select value={view} onChange={(e) => setView(e.target.value)} style={{ width: "auto", padding: "8px 10px", fontSize: 13 }}>
+            <option value="hiring">Candidates for…</option>
+            <option value="team">Referred by the team in…</option>
+          </select>
+          <select value={dept} onChange={(e) => setDept(e.target.value)} style={{ width: "auto", padding: "8px 10px", fontSize: 13 }}>
+            <option value="Company">Company-wide</option>
+            {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+          </select>
           <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ width: "auto", padding: "8px 10px", fontSize: 13 }}>
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
             <option value={365}>Last year</option>
             <option value={0}>All time</option>
           </select>
-          {data?.scopedToOwnDept ? (
-            <span className="pill active" style={{ alignSelf: "center" }}>{data.dept}</span>
-          ) : (
-            <select value={dept} onChange={(e) => setDept(e.target.value)} style={{ width: "auto", padding: "8px 10px", fontSize: 13 }}>
-              <option value="Company">Company-wide</option>
-              {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-            </select>
-          )}
         </div>
 
         {!data && <div className="spinner">Loading…</div>}

@@ -3,23 +3,38 @@ import { requireManager } from "@/lib/server";
 import { STAGES, HIRED_STAGE } from "@/lib/constants";
 
 // Campaign reporting: funnel, conversions, hires, rep quality.
-// Managers are scoped to their department; Recruiting can view any or all.
+// Any manager can view any department or company-wide. Two views:
+//   hiring — candidates referred INTO the department (default)
+//   team   — referrals submitted BY the department's people, wherever they went
 export async function GET(request) {
   const { user, db, error } = await requireManager(request);
   if (error) return error;
 
   const url = new URL(request.url);
   const days = Number(url.searchParams.get("days")) || 0; // 0 = all time
-  let dept = url.searchParams.get("dept") || "Company";
-  if (user.dept !== "Recruiting" && user.dept) dept = user.dept;
+  const dept = url.searchParams.get("dept") || "Company";
+  const view = url.searchParams.get("view") === "team" ? "team" : "hiring";
 
   const since = days ? new Date(Date.now() - days * 86400000).toISOString() : "";
 
-  const snap = await db.collection("referrals").get();
+  const [snap, usersSnap] = await Promise.all([
+    db.collection("referrals").get(),
+    db.collection("users").get(),
+  ]);
+
+  // Team view keys off the referrer's *current* department — the snapshot
+  // stored on the referral can be blank or stale.
+  const deptByUid = {};
+  usersSnap.docs.forEach((d) => (deptByUid[d.id] = d.data().dept || ""));
+
   const referrals = snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .filter((r) => r.createdAt >= since)
-    .filter((r) => dept === "Company" || r.dept === dept);
+    .filter((r) => {
+      if (dept === "Company") return true;
+      if (view === "team") return deptByUid[r.referrerUid] === dept;
+      return r.dept === dept;
+    });
 
   // Funnel: how many referrals reached each stage (cumulative).
   const funnel = STAGES.map((label, i) => ({
@@ -57,7 +72,7 @@ export async function GET(request) {
   return NextResponse.json({
     dept,
     days,
-    scopedToOwnDept: user.dept !== "Recruiting" && !!user.dept,
+    view,
     headline: {
       submitted,
       hires,
