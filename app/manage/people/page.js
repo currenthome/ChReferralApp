@@ -3,10 +3,15 @@
 import { useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import ManagerGuard from "@/components/ManagerGuard";
+import { useAuth } from "@/components/AuthProvider";
 import { api } from "@/lib/firebaseClient";
 import { DEPARTMENTS } from "@/lib/constants";
 
+const ROLE_LABELS = { admin: "Admin", manager: "Manager", employee: "Employee" };
+
 export default function People() {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === "admin";
   const [data, setData] = useState(null);
   const [toast, setToast] = useState("");
   const [showInvite, setShowInvite] = useState(false);
@@ -27,6 +32,21 @@ export default function People() {
     } catch (e) {
       setToast(e.message);
     } finally {
+      setBusy(false);
+    }
+  }
+
+  // Start viewing the app as this person. The confirmation call is made
+  // before the local flag is set, so it goes out as the real admin.
+  async function startViewAs(p) {
+    setBusy(true);
+    setToast("");
+    try {
+      await api("/api/admin/view-as", { method: "POST", body: { uid: p.uid } });
+      sessionStorage.setItem("viewAs", JSON.stringify({ uid: p.uid, name: p.name }));
+      window.location.href = "/home";
+    } catch (e) {
+      setToast(e.message);
       setBusy(false);
     }
   }
@@ -101,14 +121,34 @@ export default function People() {
                 <div className="rmeta">{p.email} · {p.dept || "No department"}{p.phone ? ` · ${p.phone}` : ""}</div>
               </div>
               <div className="ppills">
-                <span className={`pill2 acc-${p.role}`}>{p.role === "manager" ? "Manager" : "Employee"}</span>
+                <span className={`pill2 acc-${p.role}`}>{ROLE_LABELS[p.role] || "Employee"}</span>
                 <span className={`pill2 st-${p.status.toLowerCase()}`}>{p.status}</span>
               </div>
             </div>
             <div className="pactions">
-              <button disabled={busy} onClick={() => act({ action: "setRole", uid: p.uid, role: p.role === "manager" ? "employee" : "manager" })}>
-                {p.role === "manager" ? "Make employee" : "Make manager"}
-              </button>
+              {isAdmin ? (
+                <select
+                  disabled={busy || p.uid === profile.uid}
+                  value={p.role}
+                  onChange={(e) => act({ action: "setRole", uid: p.uid, role: e.target.value })}
+                  style={{ width: "auto", padding: 10, fontSize: 13 }}
+                >
+                  <option value="employee">Employee</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+              ) : (
+                p.role !== "admin" && (
+                  <button disabled={busy} onClick={() => act({ action: "setRole", uid: p.uid, role: p.role === "manager" ? "employee" : "manager" })}>
+                    {p.role === "manager" ? "Make employee" : "Make manager"}
+                  </button>
+                )
+              )}
+              {isAdmin && p.uid !== profile.uid && p.status === "Active" && (
+                <button disabled={busy} onClick={() => startViewAs(p)}>
+                  View as
+                </button>
+              )}
               <button disabled={busy} onClick={() => act({ action: "setActive", uid: p.uid, active: p.status === "Inactive" })}>
                 {p.status === "Inactive" ? "Reactivate" : "Deactivate"}
               </button>

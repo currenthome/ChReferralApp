@@ -3,7 +3,7 @@ import { requireUser, jsonError, audit } from "@/lib/server";
 import { DEPARTMENTS, phoneKey, formatPhone } from "@/lib/constants";
 
 export async function GET(request) {
-  const { user, error } = await requireUser(request);
+  const { user, error, viewingAs } = await requireUser(request);
   if (error) return error;
   return NextResponse.json({
     uid: user.uid,
@@ -12,6 +12,7 @@ export async function GET(request) {
     dept: user.dept,
     role: user.role,
     phone: user.phone || "",
+    viewingAs: !!viewingAs,
   });
 }
 

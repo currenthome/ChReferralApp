@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
-import { api } from "@/lib/firebaseClient";
+import { api, getViewAs } from "@/lib/firebaseClient";
 
 function Bell() {
   const router = useRouter();
@@ -94,6 +94,22 @@ export default function Shell({ children, wide = false, nav = true }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [viewAs, setViewAs] = useState(null);
+
+  useEffect(() => {
+    setViewAs(getViewAs());
+  }, []);
+
+  // Clear local state first so the exit call itself isn't sent as the target
+  // (the server rejects any non-GET while the view-as header is attached).
+  async function exitViewAs() {
+    const va = getViewAs();
+    sessionStorage.removeItem("viewAs");
+    try {
+      await api("/api/admin/view-as", { method: "DELETE", body: { uid: va?.uid, name: va?.name } });
+    } catch {}
+    window.location.href = "/manage/people";
+  }
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -108,6 +124,12 @@ export default function Shell({ children, wide = false, nav = true }) {
 
   return (
     <>
+      {viewAs && (
+        <div className="viewas">
+          Viewing as <b>{viewAs.name}</b> — read-only
+          <button onClick={exitViewAs}>Exit</button>
+        </div>
+      )}
       <div className="header">
         <Link href="/home" style={{ textDecoration: "none" }}>
           <div className="wordmark"><span className="cur">CURRENT</span><span className="home">HOME</span></div>

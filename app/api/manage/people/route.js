@@ -23,7 +23,7 @@ export async function GET(request) {
 }
 
 async function countOtherActiveManagers(db, exceptUid) {
-  const snap = await db.collection("users").where("role", "==", "manager").get();
+  const snap = await db.collection("users").where("role", "in", ["manager", "admin"]).get();
   return snap.docs.filter((d) => d.id !== exceptUid && d.data().active !== false).length;
 }
 
@@ -81,8 +81,15 @@ export async function POST(request) {
   const target = targetSnap.data();
 
   if (action === "setRole") {
-    const role = body.role === "manager" ? "manager" : "employee";
-    if (target.role === "manager" && role === "employee") {
+    const role = ["admin", "manager", "employee"].includes(body.role) ? body.role : "employee";
+    // Admin access is granted and revoked only by admins.
+    if ((role === "admin" || target.role === "admin") && user.role !== "admin") {
+      return jsonError("Only an admin can change admin access.");
+    }
+    if (targetUid === user.uid && target.role === "admin" && role !== "admin") {
+      return jsonError("You can't remove your own admin access.");
+    }
+    if (["manager", "admin"].includes(target.role) && role === "employee") {
       const others = await countOtherActiveManagers(db, targetUid);
       if (others === 0) return jsonError("Blocked: this is the last active manager.");
     }
@@ -109,7 +116,10 @@ export async function POST(request) {
 
   if (action === "setActive") {
     const active = !!body.active;
-    if (!active && target.role === "manager") {
+    if (!active && target.role === "admin" && user.role !== "admin") {
+      return jsonError("Only an admin can deactivate an admin.");
+    }
+    if (!active && ["manager", "admin"].includes(target.role)) {
       const others = await countOtherActiveManagers(db, targetUid);
       if (others === 0) return jsonError("Blocked: this is the last active manager.");
     }

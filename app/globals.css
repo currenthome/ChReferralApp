@@ -132,6 +132,10 @@ input.bad,select.bad{border-color:var(--err);}
 .pill2{display:inline-block;font-weight:500;font-size:11px;padding:3px 9px;border-radius:999px;margin-left:6px;margin-bottom:4px;}
 .acc-manager{background:var(--charcoal);color:#fff;}
 .acc-employee{background:#eceef2;color:var(--slate);}
+.acc-admin{background:#5b3fbf;color:#fff;}
+.viewas{position:sticky;top:0;z-index:60;background:#b26a00;color:#fff;padding:10px 16px;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:10px;}
+.viewas b{font-weight:700;}
+.viewas button{font-family:inherit;font-weight:700;font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid #fff;background:transparent;color:#fff;cursor:pointer;}
 .st-active{background:#e5f7ea;color:#1e7d34;}
 .st-inactive{background:#eceef2;color:var(--slate);}
 .st-invited{background:var(--cyanlight);color:#0a7d8f;}

@@ -124,7 +124,7 @@ export default function Home() {
       <ActionButton href="/prizes" title="Prizes & goals" sub="See what you can win and how close you are." />
       <ActionButton href="/share" title="Share & recruit" sub="Get your personal link and QR code to post." />
       <ActionButton href="/leaderboard" title="Leaderboard" sub="See how you stack up against the team." />
-      {profile?.role === "manager" && (
+      {(profile?.role === "manager" || profile?.role === "admin") && (
         <ActionButton manage href="/manage" title="Manage" sub="Update funnel stages, invite and manage people." />
       )}
 

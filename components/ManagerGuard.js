@@ -9,11 +9,12 @@ import { useAuth } from "./AuthProvider";
 export default function ManagerGuard({ children }) {
   const { profile, loading } = useAuth();
   const router = useRouter();
+  const allowed = profile && (profile.role === "manager" || profile.role === "admin");
 
   useEffect(() => {
-    if (!loading && profile && profile.role !== "manager") router.replace("/home");
-  }, [loading, profile, router]);
+    if (!loading && profile && !allowed) router.replace("/home");
+  }, [loading, profile, allowed, router]);
 
-  if (!profile || profile.role !== "manager") return <div className="spinner">Loading…</div>;
+  if (!allowed) return <div className="spinner">Loading…</div>;
   return children;
 }
