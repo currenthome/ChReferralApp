@@ -37,15 +37,21 @@ export default function Report() {
           Referral program performance — funnel, conversions, hires, and rep quality.
         </p>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
-          <select value={view} onChange={(e) => setView(e.target.value)} style={{ width: "auto", padding: "8px 10px", fontSize: 13 }}>
-            <option value="hiring">Candidates for…</option>
-            <option value="team">Referred by the team in…</option>
-          </select>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8, alignItems: "center" }}>
           <select value={dept} onChange={(e) => setDept(e.target.value)} style={{ width: "auto", padding: "8px 10px", fontSize: 13 }}>
             <option value="Company">Company-wide</option>
             {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
           </select>
+          {dept !== "Company" && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className={`pill${view === "hiring" ? " active" : ""}`} onClick={() => setView("hiring")}>
+                Jobs in {dept}
+              </button>
+              <button className={`pill${view === "team" ? " active" : ""}`} onClick={() => setView("team")}>
+                Referred by {dept}
+              </button>
+            </div>
+          )}
           <select value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ width: "auto", padding: "8px 10px", fontSize: 13 }}>
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
@@ -53,6 +59,13 @@ export default function Report() {
             <option value={0}>All time</option>
           </select>
         </div>
+        <p className="note" style={{ textAlign: "left", marginBottom: 18 }}>
+          {dept === "Company"
+            ? "Every referral in the company."
+            : view === "hiring"
+            ? `Candidates referred for ${dept} jobs — no matter who referred them.`
+            : `Everything ${dept} employees have referred — no matter which department the candidate went to.`}
+        </p>
 
         {!data && <div className="spinner">Loading…</div>}
 
