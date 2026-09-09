@@ -127,6 +127,9 @@ export default function Home() {
       {(profile?.role === "manager" || profile?.role === "admin") && (
         <ActionButton manage href="/manage" title="Manage" sub="Update funnel stages, invite and manage people." />
       )}
+      {profile?.v2Visible && (
+        <ActionButton manage href="/recruiting" title="Recruiting" sub="Classes, candidates, scorecards, and reporting." />
+      )}
 
       <p className="note">
         Signed in as {profile?.email} · <button className="link" onClick={logout}>Sign out</button>

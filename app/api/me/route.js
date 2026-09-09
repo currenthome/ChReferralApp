@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser, jsonError, audit } from "@/lib/server";
+import { requireUser, jsonError, audit, v2Visible } from "@/lib/server";
 import { DEPARTMENTS, phoneKey, formatPhone } from "@/lib/constants";
 
 export async function GET(request) {
@@ -13,6 +13,11 @@ export async function GET(request) {
     role: user.role,
     phone: user.phone || "",
     viewingAs: !!viewingAs,
+    // Recruiting side: the level itself, plus whether this person should see
+    // any of it at all. Until launch that's allow-list only, so the client
+    // can't work it out on its own.
+    v2Access: user.v2Access || "",
+    v2Visible: v2Visible(user),
   });
 }
 

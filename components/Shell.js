@@ -55,6 +55,13 @@ const CRUMBS = {
   "/manage/scoring": "Scoring",
   "/manage/prizes": "Prizes",
   "/manage/hires": "Hires",
+  "/recruiting": "Recruiting",
+  "/recruiting/classes": "Classes",
+  "/recruiting/pipeline": "Pipeline",
+  "/recruiting/scorecards": "Scorecards",
+  "/recruiting/reports": "Reports",
+  "/recruiting/forecast": "Forecast",
+  "/recruiting/activity": "Activity",
 };
 
 function Crumbs({ pathname }) {
