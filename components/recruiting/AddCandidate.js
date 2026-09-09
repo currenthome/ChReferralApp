@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api, clientAuth, getViewAs } from "@/lib/firebaseClient";
 import { DEPARTMENTS } from "@/lib/constants";
 import { INTERVIEW_TYPES, INTERVIEW_LABEL } from "@/lib/recruiting";
-import { Modal, fmtDate } from "./ui";
+import { Modal, fmtDate, initials } from "./ui";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -26,7 +26,23 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
   // Referrals an employee has already submitted, so nobody retypes one.
   const [referrals, setReferrals] = useState([]);
   const [fromId, setFromId] = useState("");
+  const [refQuery, setRefQuery] = useState("");
   const picked = referrals.find((r) => r.id === fromId) || null;
+
+  // Search rather than a list: this grows every time somebody refers anyone,
+  // and a dropdown of hundreds is no use on a phone. Matches on name or on
+  // the digits of a phone number, however either was typed.
+  const q = refQuery.trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, "");
+  const matches = !q
+    ? []
+    : referrals
+        .filter(
+          (r) =>
+            r.name.toLowerCase().includes(q) ||
+            (qDigits.length >= 3 && (r.phoneKey || "").includes(qDigits))
+        )
+        .slice(0, 8);
 
   useEffect(() => {
     api("/api/recruiting/referrals")
@@ -48,6 +64,7 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
 
   function startFresh() {
     setFromId("");
+    setRefQuery("");
     setForm((f) => ({ ...f, name: "", phone: "" }));
   }
 
@@ -139,30 +156,57 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
     >
       {err && <div className="toast warn">{err}</div>}
 
-      {referrals.length > 0 && (
+      {picked ? (
         <div className="field">
-          <label>Start from a referral</label>
-          <select value={fromId} onChange={(e) => (e.target.value ? startFrom(e.target.value) : startFresh())}>
-            <option value="">Nobody — I'm typing them in</option>
-            {referrals.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} · {r.dept} · referred by {r.referrerName}
-              </option>
-            ))}
-          </select>
+          <label>Starting from a referral</label>
+          <div className="rc-oh" style={{ marginTop: 0 }}>
+            <b>{picked.name}</b> · {picked.phone} · {picked.dept} · referred by {picked.referrerName} ·
+            currently at “{picked.stage}”
+            {picked.resumeName ? ` · resume ${picked.resumeName} comes across` : " · no resume on file"}
+          </div>
           <div className="rc-hint">
-            {picked
-              ? `Linked to ${picked.referrerName}'s referral — they get their points automatically when this person is hired.`
-              : `${referrals.length} employee referral${referrals.length === 1 ? "" : "s"} waiting. Picking one fills this in and makes sure the referrer gets paid.`}
+            {picked.referrerName} gets their points automatically when this person is hired.{" "}
+            <button className="link" style={{ fontWeight: 700 }} onClick={startFresh}>
+              Choose someone else
+            </button>
           </div>
         </div>
-      )}
+      ) : (
+        referrals.length > 0 && (
+          <div className="field">
+            <label>Were they referred by an employee?</label>
+            <input
+              value={refQuery}
+              onChange={(e) => setRefQuery(e.target.value)}
+              placeholder="Search by name or phone number"
+            />
+            <div className="rc-hint">
+              {referrals.length} referral{referrals.length === 1 ? "" : "s"} waiting to be worked. Find them
+              here and the referrer gets paid for certain — otherwise just fill the form in below.
+            </div>
 
-      {picked && (
-        <div className="rc-oh" style={{ marginTop: 0, marginBottom: 18 }}>
-          <b>{picked.name}</b> · {picked.phone} · referred by {picked.referrerName} · currently at “{picked.stage}”
-          {picked.resumeName ? ` · resume ${picked.resumeName} comes across` : " · no resume on file"}
-        </div>
+            {q && (
+              <div style={{ marginTop: 10, maxHeight: 260, overflowY: "auto" }}>
+                {matches.length ? (
+                  matches.map((r) => (
+                    <button key={r.id} className="rc-candrow" onClick={() => startFrom(r.id)}>
+                      <span className="rc-ci">{initials(r.name)}</span>
+                      <span className="rc-crmain">
+                        <span className="nm">{r.name}</span>
+                        <span className="sb">
+                          {r.phone} · {r.dept} · referred by {r.referrerName}
+                        </span>
+                      </span>
+                      <span className="rc-stage s-interviewing">{r.stage}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="rc-empty">No referral matches “{refQuery.trim()}”.</div>
+                )}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       <div className="field">
