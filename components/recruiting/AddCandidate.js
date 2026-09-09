@@ -41,7 +41,9 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
     const r = referrals.find((x) => x.id === id);
     if (!r) return;
     setForm((f) => ({ ...f, name: r.name, phone: r.phone }));
-    if (!lockedDept && r.dept) setDept(r.dept);
+    // A class already chosen is the more specific decision, so it keeps the
+    // department it set — a person referred for Sales can be hired into HR.
+    if (!lockedDept && !form.classId && r.dept) setDept(r.dept);
   }
 
   function startFresh() {
@@ -54,13 +56,21 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
     if (!deptRoles.includes(role)) setRole(deptRoles[0] || "");
   }, [dept, deptRoles, role]);
 
-  // Only classes for this exact department and role can take this person.
-  const classOpts = classes.filter((c) => c.dept === dept && c.role === role);
-  useEffect(() => {
-    if (form.classId && !classOpts.some((c) => c.id === form.classId)) {
-      setForm((f) => ({ ...f, classId: "" }));
-    }
-  }, [classOpts, form.classId]);
+  // Every class still to come, whatever the department — a recruiter thinks
+  // "put them in that class", so the class is what they pick, and the
+  // department and role follow from it.
+  const classOpts = classes
+    .filter((c) => c.date >= today())
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const chosenClass = classOpts.find((c) => c.id === form.classId) || null;
+
+  function pickClass(id) {
+    setForm((f) => ({ ...f, classId: id }));
+    const c = classOpts.find((x) => x.id === id);
+    if (!c) return;
+    if (!lockedDept) setDept(c.dept);
+    setRole(c.role);
+  }
 
   const interviewers = people.filter((p) => p.allDepts || p.dept === dept);
   useEffect(() => {
@@ -169,10 +179,34 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
           <input value={form.email} onChange={set("email")} placeholder="name@email.com" />
         </div>
       </div>
+      <div className="field">
+        <label>Which class are they for?</label>
+        <select value={form.classId} onChange={(e) => pickClass(e.target.value)}>
+          <option value="">Not in a class</option>
+          {classOpts.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.role} · {fmtDate(c.date).mon} {fmtDate(c.date).day} · {c.location}
+              {lockedDept ? "" : ` (${c.dept})`}
+            </option>
+          ))}
+        </select>
+        <div className="rc-hint">
+          {classOpts.length === 0
+            ? "No classes coming up yet — request one on the Classes screen, or leave this as it is."
+            : chosenClass
+            ? "This sets their department and role to match the class."
+            : "Pick the class and the department and role fill themselves in. Leave it unset for a hire with no class."}
+        </div>
+      </div>
+
       <div className="rc-f2">
         <div className="field">
           <label>Department</label>
-          <select value={dept} onChange={(e) => setDept(e.target.value)} disabled={!!lockedDept}>
+          <select
+            value={dept}
+            onChange={(e) => setDept(e.target.value)}
+            disabled={!!lockedDept || !!chosenClass}
+          >
             {DEPARTMENTS.map((d) => (
               <option key={d}>{d}</option>
             ))}
@@ -181,26 +215,19 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
         </div>
         <div className="field">
           <label>Role</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <select value={role} onChange={(e) => setRole(e.target.value)} disabled={!!chosenClass}>
             {deptRoles.map((r) => (
               <option key={r}>{r}</option>
             ))}
           </select>
         </div>
       </div>
-
-      <div className="field">
-        <label>Target class</label>
-        <select value={form.classId} onChange={set("classId")}>
-          <option value="">Not in a class</option>
-          {classOpts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {fmtDate(c.date).mon} {fmtDate(c.date).day} · {c.location}
-            </option>
-          ))}
-        </select>
-        <div className="rc-hint">Only classes for this role show. Leave it unset to decide later.</div>
-      </div>
+      {chosenClass && (
+        <div className="rc-hint" style={{ margin: "-8px 0 18px" }}>
+          Set by the {chosenClass.role} class on {fmtDate(chosenClass.date).full}. Change the class above to
+          change these.
+        </div>
+      )}
 
       <div className="field">
         <label>Resume</label>
