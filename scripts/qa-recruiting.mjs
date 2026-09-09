@@ -422,5 +422,122 @@ if (mode === "flow") {
   process.exit(fail ? 1 : 0);
 }
 
+// ---------------------------------------------------------------------------
+// picker: starting a candidate from a referral that's already been submitted
+// ---------------------------------------------------------------------------
+if (mode === "picker") {
+  await cleanup(true);
+
+  const now = new Date().toISOString();
+  const referrer = (await db.collection("users").where("email", "==", AS_EMAIL).get()).docs[0];
+
+  // One waiting referral, with a resume on it, and one already passed on.
+  const waiting = await db.collection("referrals").add({
+    candidateName: "QA Picker Person",
+    candidatePhone: "(951) 555-9911",
+    phoneKey: "9515559911",
+    dept: "Sales",
+    resumeUrl: "https://example.com/qa-resume.pdf",
+    resumeName: "QA_Resume.pdf",
+    referrerUid: referrer.id,
+    referrerName: referrer.data().name,
+    referrerDept: referrer.data().dept || "",
+    stage: 1,
+    out: false,
+    lead: "recruiting",
+    startDate: null,
+    startAwarded: false,
+    day30Awarded: false,
+    createdAt: now,
+    stageChangedAt: now,
+    timeline: [{ stage: "Submitted", at: now }],
+    qaTag: TAG,
+  });
+  const passedOn = await db.collection("referrals").add({
+    candidateName: "QA Passed Person",
+    candidatePhone: "(951) 555-9912",
+    phoneKey: "9515559912",
+    dept: "Sales",
+    referrerUid: referrer.id,
+    referrerName: referrer.data().name,
+    stage: 1,
+    out: true,
+    lead: "recruiting",
+    createdAt: now,
+    stageChangedAt: now,
+    timeline: [],
+    qaTag: TAG,
+  });
+
+  const list = (await call(token, "/api/recruiting/referrals")).body.referrals || [];
+  list.some((r) => r.id === waiting.id)
+    ? ok("waiting referral offered in the list", `${list.length} available`)
+    : bad("waiting referral offered in the list", "not there");
+  !list.some((r) => r.id === passedOn.id)
+    ? ok("a referral marked not moving forward is left out", "")
+    : bad("a referral marked not moving forward is left out", "it was offered");
+
+  const offered = list.find((r) => r.id === waiting.id);
+  offered?.resumeName === "QA_Resume.pdf" && offered.referrerName
+    ? ok("list carries what the form needs", `${offered.name}, ${offered.dept}, resume + referrer`)
+    : bad("list carries what the form needs", JSON.stringify(offered));
+
+  // Add from it. Note the phone sent is deliberately wrong — the link must come
+  // from the referral that was picked, not from matching digits.
+  const add = await call(token, "/api/recruiting/candidates", {
+    method: "POST",
+    body: {
+      name: "QA Picker Person",
+      phone: "(951) 555-0000",
+      dept: "Sales",
+      role: "Solar Advisor",
+      referralId: waiting.id,
+      prescreenNotes: "QA picker run.",
+    },
+  });
+  const candId = add.body.id;
+  candId ? ok("added from the referral", add.body.message) : bad("added from the referral", JSON.stringify(add.body));
+  if (!candId) process.exit(1);
+  await db.collection("candidates").doc(candId).update({ qaTag: TAG });
+
+  const cand = (await call(token, `/api/recruiting/candidates/${candId}`)).body.candidate;
+  cand.referralId === waiting.id
+    ? ok("linked even though the phone didn't match", `referred by ${cand.referrerName}`)
+    : bad("linked even though the phone didn't match", `referralId ${cand.referralId}`);
+  cand.resumeName === "QA_Resume.pdf"
+    ? ok("resume came across from the referral", cand.resumeName)
+    : bad("resume came across from the referral", String(cand.resumeName));
+  cand.source === "referral"
+    ? ok("counted as a referral, not a job-board applicant", cand.source)
+    : bad("counted as a referral, not a job-board applicant", String(cand.source));
+
+  const dupe = await call(token, "/api/recruiting/candidates", {
+    method: "POST",
+    body: { name: "QA Picker Person", phone: "(951) 555-9911", dept: "Sales", role: "Solar Advisor", referralId: waiting.id },
+  });
+  dupe.status !== 200
+    ? ok("the same referral can't be started twice", dupe.body.error)
+    : bad("the same referral can't be started twice", "it let me");
+
+  const outAttempt = await call(token, "/api/recruiting/candidates", {
+    method: "POST",
+    body: { name: "QA Passed Person", phone: "(951) 555-9912", dept: "Sales", role: "Solar Advisor", referralId: passedOn.id },
+  });
+  outAttempt.status !== 200
+    ? ok("can't start from one that was passed on", outAttempt.body.error)
+    : bad("can't start from one that was passed on", "it let me");
+
+  const listAfter = (await call(token, "/api/recruiting/referrals")).body.referrals || [];
+  !listAfter.some((r) => r.id === waiting.id)
+    ? ok("it drops off the list once someone's working it", "")
+    : bad("it drops off the list once someone's working it", "still offered");
+
+  await cleanup(true);
+  ok("test records cleaned up", "");
+
+  console.log(`\n${pass} passed, ${fail} failed`);
+  process.exit(fail ? 1 : 0);
+}
+
 console.error(`unknown mode: ${mode}`);
 process.exit(1);

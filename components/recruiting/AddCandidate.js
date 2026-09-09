@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { clientAuth, getViewAs } from "@/lib/firebaseClient";
+import { api, clientAuth, getViewAs } from "@/lib/firebaseClient";
 import { DEPARTMENTS } from "@/lib/constants";
 import { INTERVIEW_TYPES, INTERVIEW_LABEL } from "@/lib/recruiting";
 import { Modal, fmtDate } from "./ui";
@@ -22,6 +22,32 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
   const [resume, setResume] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  // Referrals an employee has already submitted, so nobody retypes one.
+  const [referrals, setReferrals] = useState([]);
+  const [fromId, setFromId] = useState("");
+  const picked = referrals.find((r) => r.id === fromId) || null;
+
+  useEffect(() => {
+    api("/api/recruiting/referrals")
+      .then((d) => setReferrals(d.referrals))
+      .catch(() => setReferrals([]));
+  }, []);
+
+  // Picking one fills in everything the referral already knows. Their
+  // department comes across too, since that's the job they were referred for.
+  function startFrom(id) {
+    setFromId(id);
+    const r = referrals.find((x) => x.id === id);
+    if (!r) return;
+    setForm((f) => ({ ...f, name: r.name, phone: r.phone }));
+    if (!lockedDept && r.dept) setDept(r.dept);
+  }
+
+  function startFresh() {
+    setFromId("");
+    setForm((f) => ({ ...f, name: "", phone: "" }));
+  }
 
   const deptRoles = roles[dept] || [];
   useEffect(() => {
@@ -58,6 +84,7 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
       fd.append("role", role);
       fd.append("classId", form.classId);
       fd.append("prescreenNotes", form.prescreenNotes);
+      if (fromId) fd.append("referralId", fromId);
       if (sched) {
         fd.append("ivType", iv.type);
         fd.append("ivDate", iv.date);
@@ -101,6 +128,32 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
       }
     >
       {err && <div className="toast warn">{err}</div>}
+
+      {referrals.length > 0 && (
+        <div className="field">
+          <label>Start from a referral</label>
+          <select value={fromId} onChange={(e) => (e.target.value ? startFrom(e.target.value) : startFresh())}>
+            <option value="">Nobody — I'm typing them in</option>
+            {referrals.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name} · {r.dept} · referred by {r.referrerName}
+              </option>
+            ))}
+          </select>
+          <div className="rc-hint">
+            {picked
+              ? `Linked to ${picked.referrerName}'s referral — they get their points automatically when this person is hired.`
+              : `${referrals.length} employee referral${referrals.length === 1 ? "" : "s"} waiting. Picking one fills this in and makes sure the referrer gets paid.`}
+          </div>
+        </div>
+      )}
+
+      {picked && (
+        <div className="rc-oh" style={{ marginTop: 0, marginBottom: 18 }}>
+          <b>{picked.name}</b> · {picked.phone} · referred by {picked.referrerName} · currently at “{picked.stage}”
+          {picked.resumeName ? ` · resume ${picked.resumeName} comes across` : " · no resume on file"}
+        </div>
+      )}
 
       <div className="field">
         <label>Full name</label>

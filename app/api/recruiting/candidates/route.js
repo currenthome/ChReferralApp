@@ -87,6 +87,30 @@ export async function POST(request) {
     if (cls.dept !== dept || cls.role !== role) return jsonError("That class is for a different role.");
   }
 
+  // Two ways a candidate can be tied to an employee's referral. Starting from
+  // one is certain, because the recruiter picked it off the list. Otherwise the
+  // mobile number is checked against the referrals already in the system.
+  let match = { matches: 0, referral: null };
+  const fromReferralId = String(body.referralId || "").trim();
+
+  if (fromReferralId) {
+    const refSnap = await db.collection("referrals").doc(fromReferralId).get();
+    if (!refSnap.exists) return jsonError("That referral no longer exists.");
+    const r = refSnap.data();
+    if (r.out) {
+      return jsonError("That referral is marked not moving forward — a manager needs to reopen it first.");
+    }
+
+    // One referral, one candidate. Two would mean two people working the same
+    // person, and the write-back firing twice on hire.
+    const already = await db.collection("candidates").where("referralId", "==", fromReferralId).get();
+    if (!already.empty) return jsonError(`${r.candidateName} is already in the pipeline.`);
+
+    match = { matches: 1, referral: { id: fromReferralId, ...r } };
+  } else {
+    match = await matchReferral(db, key);
+  }
+
   // Scheduling the first interview is part of adding someone, but optional.
   let firstIv = null;
   if (body.ivType) {
@@ -105,8 +129,10 @@ export async function POST(request) {
     };
   }
 
-  let resumeUrl = "";
-  let resumeName = "";
+  // A referral may already have a resume on it — carry it across rather than
+  // making the recruiter find the file again. A fresh upload wins.
+  let resumeUrl = match.referral?.resumeUrl || "";
+  let resumeName = match.referral?.resumeName || "";
   if (resumeFile) {
     const lower = (resumeFile.name || "resume").toLowerCase();
     if (!RESUME_TYPES.some((ext) => lower.endsWith(ext))) {
@@ -128,10 +154,6 @@ export async function POST(request) {
 
   const prescreenNotes = String(body.prescreenNotes || "").trim().slice(0, 4000);
   const now = new Date().toISOString();
-
-  // Was this person already referred by an employee? Read-only for now: the
-  // link is recorded and shown, and nothing is written back to the referral.
-  const match = await matchReferral(db, key);
 
   const ref = await db.collection("candidates").add({
     name,
