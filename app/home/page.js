@@ -60,12 +60,17 @@ function ActionButton({ href, title, sub, primary, manage }) {
 export default function Home() {
   const { profile, logout } = useAuth();
   const [board, setBoard] = useState(null);
+  const [money, setMoney] = useState(null);
 
   useEffect(() => {
     if (!profile) return;
     api("/api/leaderboard?range=month&scope=dept")
       .then(setBoard)
       .catch(() => setBoard({ rows: [] }));
+    // Own referrals and own ledger only — no collection scans.
+    api("/api/earnings")
+      .then(setMoney)
+      .catch(() => setMoney(null));
   }, [profile]);
 
   const rows = board?.rows || [];
@@ -73,14 +78,18 @@ export default function Home() {
   const top = rows[0]?.points || 0;
   const firstName = (profile?.name || "").split(" ")[0];
   const ahead = me && me.rank > 1 ? rows[me.rank - 2] : null;
+  const open = (money?.referrals || []).filter((r) => !r.out && !r.hired && !r.terminated).length;
 
   return (
-    <Shell>
+    <Shell wide>
       <p className="greet">Welcome back,</p>
       <p className="greetname">{firstName || "there"}</p>
 
       {profile && !profile.dept && <DeptPicker />}
 
+      {/* Phone. Byte for byte what it was — the desktop block below is a
+          separate layout rather than this one stretched wider. */}
+      <div className="mobonly">
       <div className="homesplit">
       <div>
       <div className="hero">
@@ -137,6 +146,110 @@ export default function Home() {
         <ActionButton manage href="/recruiting" title="Recruiting" sub="Classes, candidates, scorecards, and reporting." />
       )}
 
+      </div>
+      </div>
+
+      {/* Desktop. A strip of figures, the standings as a table, and one column
+          for the thing you came here to do. */}
+      <div className="deskonly">
+        <div className="hstats">
+          <div className="hstat lead">
+            <div className="l">Your rank</div>
+            <div className="v">{me ? `#${me.rank}` : "—"} <small>of {rows.length || "—"} in {board?.scope || "your team"}</small></div>
+            <div className="s">
+              {ahead
+                ? ahead.points === me.points
+                  ? `Level with ${ahead.name.split(" ")[0]} — one referral puts you ahead`
+                  : `${ahead.points - me.points} pts behind ${ahead.name.split(" ")[0]}`
+                : me && rows.length > 1
+                ? `${me.points - rows[1].points} pts clear of ${rows[1].name.split(" ")[0]}`
+                : " "}
+            </div>
+          </div>
+          <div className="hstat">
+            <div className="l">Points this month</div>
+            <div className="v">{me?.points ?? 0}</div>
+            <div className="s">{new Date().toLocaleString("en", { month: "long" })}</div>
+          </div>
+          <div className="hstat">
+            <div className="l">In your pipeline</div>
+            <div className="v">{money ? open : "—"}</div>
+            <div className="s">Referrals still in play</div>
+          </div>
+          <div className="hstat">
+            <div className="l">Cash paid to you</div>
+            <div className="v">{money ? `$${money.earned.toLocaleString()}` : "—"}</div>
+            <div className="s">
+              {money && money.pipeline > 0 ? `$${money.pipeline.toLocaleString()} more in the pipeline` : "All time"}
+            </div>
+          </div>
+        </div>
+
+        <div className="hcols">
+          <div className="hpanel">
+            <h4>You vs the field · {board?.scope || "your team"} · {new Date().toLocaleString("en", { month: "long" })}</h4>
+            {rows.length === 0 ? (
+              <p className="hempty">Nobody on the board yet this month. Be first.</p>
+            ) : (
+              <table className="htable">
+                <thead>
+                  <tr>
+                    <th></th><th>Name</th><th></th>
+                    <th style={{ textAlign: "right" }}>Hires</th>
+                    <th style={{ textAlign: "right" }}>Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.uid} className={r.you ? "you" : undefined}>
+                      <td className={`hrk${r.rank === 1 ? " top" : ""}`}>{r.rank}</td>
+                      <td>{r.you ? "You" : r.name}</td>
+                      <td>
+                        {r.points > 0 && (
+                          <span className="hbar">
+                            <i style={{ width: `${top ? Math.max(6, (r.points / top) * 100) : 6}%` }} />
+                          </span>
+                        )}
+                      </td>
+                      <td className="hnum">{r.hires}</td>
+                      <td className="hnum">{r.points}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div>
+            <div className="hpanel">
+              <h4>Do something</h4>
+              <div className="hpad">
+                <Link href="/submit" className="hcta">Submit a referral</Link>
+                <div className="hquiet">
+                  <Link href="/my-referrals">My referrals <span>{money ? `${open} open` : ""}</span></Link>
+                  <Link href="/earnings">My earnings <span>{money ? `$${money.earned.toLocaleString()} paid` : ""}</span></Link>
+                  <Link href="/prizes">Prizes &amp; goals <span>{board?.banner ? "1 running" : ""}</span></Link>
+                  <Link href="/share">Share &amp; recruit <span>link + QR</span></Link>
+                </div>
+              </div>
+            </div>
+            {(profile?.role === "manager" || profile?.role === "admin" || profile?.v2Visible) && (
+              <div className="hpanel" style={{ marginTop: 12 }}>
+                <h4>Your tools</h4>
+                <div className="hpad">
+                  <div className="hquiet">
+                    {(profile?.role === "manager" || profile?.role === "admin") && (
+                      <Link href="/manage">Manage <span>funnel, people, scoring</span></Link>
+                    )}
+                    {profile?.v2Visible && (
+                      <Link href="/recruiting">Recruiting <span>classes, candidates, reports</span></Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <p className="note">
