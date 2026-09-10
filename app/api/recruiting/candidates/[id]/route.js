@@ -314,7 +314,11 @@ export async function POST(request, { params }) {
   if (action === "outcome") {
     // What happened after they were hired: did they show up, did they get
     // through training, and if they've gone, when and why. These are the only
-    // things a class report needs a person to type in.
+    // things a class report needs a person to type in — and they're entered
+    // from the Reports screen, which is executives-only for editing.
+    if (v2.level !== "exec") {
+      return jsonError("Recording what happened to a hire is an executive's to do.", 403);
+    }
     if (candidate.stage !== "hired") return jsonError("Only a hired person has an outcome yet.");
 
     const update = {};

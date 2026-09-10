@@ -19,7 +19,11 @@ async function loadClass(db, id, v2) {
 const FUNNEL_FIELDS = ["applicants", "adApplications", "prescreens", "interviewed"];
 
 export async function POST(request, { params }) {
-  const { user, db, error, v2 } = await requireV2(request);
+  // Numbers on a report are entered by executives only. Everyone else reads
+  // them — Justin's call after the September 10 call with Skip and Lauren,
+  // which overrides the spec's original allowance for a department manager to
+  // enter their own department's ATS data.
+  const { user, db, error, v2 } = await requireV2(request, { minLevel: "exec" });
   if (error) return error;
 
   const { id } = await params;

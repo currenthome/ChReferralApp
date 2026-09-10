@@ -58,7 +58,8 @@ export default function Reports() {
     ? [...new Set([...data.classes.map((c) => monthOf(c.date)), ...Object.keys(data.overhead)])].sort().reverse()
     : [];
 
-  const canEditClass = (cls) => allDepts || cls.dept === profile?.dept;
+  // Nothing on Reports is editable below exec, so don't offer it.
+  const canEditClass = () => isExec;
 
   return (
     <Shell wide nav={false}>
@@ -69,6 +70,11 @@ export default function Reports() {
         </p>
         {toast && <div className="toast">{toast}</div>}
         {err && <div className="toast warn">{err}</div>}
+        {!isExec && (
+          <p className="rc-note" style={{ marginTop: -6, marginBottom: 16 }}>
+            These figures are read-only for you. Ask Justin, Skip, Lauren, TJ or Brian to change anything.
+          </p>
+        )}
 
         <div className="rc-bar">
           {MODES.map(([id, label]) => (
@@ -94,7 +100,7 @@ export default function Reports() {
             </select>
           )}
           <span className="grow" />
-          {data?.classes.length > 0 && (
+          {isExec && data?.classes.length > 0 && (
             <button className="rc-btnsm ghost" onClick={() => setEditing("ats")}>
               Enter ATS data
             </button>
