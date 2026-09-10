@@ -302,9 +302,10 @@ if (mode === "flow") {
   const responses = {};
   form.sections.forEach((s) =>
     s.items.forEach((it) => {
-      if (it.type === "graded") responses[it.id] = { score: 8, note: "QA" };
-      else if (it.type === "yesno") responses[it.id] = { answer: "yes" };
-      else responses[it.id] = { note: "QA" };
+      if (it.type === "graded") responses[it.id] = { score: 8, note: "QA graded note" };
+      // Every question type takes an optional note, a yes/no included.
+      else if (it.type === "yesno") responses[it.id] = { answer: "yes", note: "QA yes/no note" };
+      else responses[it.id] = { note: "QA custom answer" };
     })
   );
   const score = await call(token, `/api/recruiting/candidates/${candId}`, {
@@ -327,6 +328,15 @@ if (mode === "flow") {
   snapshot.scorecard?.sections?.length
     ? ok("scorecard saved as a snapshot", `${snapshot.scorecard.sections.length} sections, score ${snapshot.score}`)
     : bad("scorecard saved as a snapshot", "no sections stored");
+
+  const allItems = (snapshot.scorecard?.sections || []).flatMap((s) => s.items);
+  const yesnos = allItems.filter((i) => i.type === "yesno");
+  yesnos.length && yesnos.every((i) => i.note === "QA yes/no note")
+    ? ok("a yes/no answer keeps its note", `${yesnos.length} of them`)
+    : bad("a yes/no answer keeps its note", JSON.stringify(yesnos.map((i) => i.note)));
+  allItems.filter((i) => i.type === "graded").every((i) => i.note === "QA graded note")
+    ? ok("graded notes still saved", "")
+    : bad("graded notes still saved", "");
 
   // Straight to hire is refused — offer has to be accepted first.
   const early = await call(token, `/api/recruiting/candidates/${candId}`, {

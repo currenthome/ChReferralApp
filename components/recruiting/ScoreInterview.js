@@ -31,7 +31,9 @@ export function ScorecardBody({ scorecard }) {
                   </span>
                 )}
               </div>
-              {(it.note || it.type === "note") && <div className="r2">{it.note || "—"}</div>}
+              {(it.note || it.type === "note") && (
+                <div className="r2" style={{ whiteSpace: "pre-wrap" }}>{it.note || "—"}</div>
+              )}
             </div>
           ))}
         </div>
@@ -211,7 +213,8 @@ export default function ScoreInterview({ candidate, interview, onClose, onScored
               )}
 
               {it.type === "yesno" && (
-                <div style={{ display: "flex", gap: 8 }}>
+                <>
+                  <div style={{ display: "flex", gap: 8 }}>
                   {["yes", "no"].map((a) => (
                     <button
                       key={a}
@@ -232,12 +235,19 @@ export default function ScoreInterview({ candidate, interview, onClose, onScored
                       {a === "yes" ? "Yes" : "No"}
                     </button>
                   ))}
-                </div>
+                  </div>
+                  <textarea
+                    placeholder="Optional note…"
+                    value={responses[it.id]?.note || ""}
+                    onChange={(e) => set(it.id, { note: e.target.value })}
+                    style={{ minHeight: 56, marginTop: 8 }}
+                  />
+                </>
               )}
 
               {it.type === "note" && (
                 <textarea
-                  placeholder="Notes…"
+                  placeholder="Your answer…"
                   value={responses[it.id]?.note || ""}
                   onChange={(e) => set(it.id, { note: e.target.value })}
                 />
