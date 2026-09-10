@@ -135,6 +135,7 @@ export default function Recruiting() {
           Your access: <b style={{ fontWeight: 700, color: "var(--charcoal)" }}>{LEVEL_LABEL[profile?.v2Access] || "—"}</b>
           {profile?.v2Access === "dept-manager" && profile?.dept ? ` · ${profile.dept}` : ""}
         </div>
+        <div className="tiles">
         {SCREENS.map((s) => (
           <Link key={s.href} href={s.href} style={{ textDecoration: "none", display: "block" }}>
             <div className={`action${s.primary ? " primary" : ""}`}>
@@ -146,6 +147,7 @@ export default function Recruiting() {
             </div>
           </Link>
         ))}
+        </div>
         <DemoPurge />
       </V2Guard>
     </Shell>

@@ -21,6 +21,7 @@ export default function Manage() {
       <ManagerGuard>
         <h1>Manage</h1>
         <p className="sub" style={{ marginBottom: 22 }}>Manager tools. Everyone with manager access can use these.</p>
+        <div className="tiles">
         {TOOLS.map((t) => (
           <Link key={t.href} href={t.href} style={{ textDecoration: "none", display: "block" }}>
             <div className={`action${t.primary ? " primary" : ""}`}>
@@ -32,6 +33,7 @@ export default function Manage() {
             </div>
           </Link>
         ))}
+        </div>
       </ManagerGuard>
     </Shell>
   );

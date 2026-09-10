@@ -81,6 +81,8 @@ export default function Home() {
 
       {profile && !profile.dept && <DeptPicker />}
 
+      <div className="homesplit">
+      <div>
       <div className="hero">
         <div>
           <div className="rank">{me ? `#${me.rank}` : "—"}</div>
@@ -103,8 +105,10 @@ export default function Home() {
         </p>
       )}
 
+      </div>
+
       {rows.length > 0 && (
-        <div className="card" style={{ marginTop: 22 }}>
+        <div className="card lbcard" style={{ marginTop: 22 }}>
           <h3>You vs the field · {board.scope}</h3>
           {rows.slice(0, 8).map((r) => (
             <div key={r.uid} className={`crow${r.you ? " you" : ""}`}>
@@ -117,7 +121,9 @@ export default function Home() {
           ))}
         </div>
       )}
+      </div>
 
+      <div className="tiles">
       <ActionButton primary href="/submit" title="Submit a referral" sub="Know someone great? Add them in seconds." />
       <ActionButton href="/my-referrals" title="My referrals" sub="Track everyone you've referred and their status." />
       <ActionButton href="/earnings" title="My earnings" sub="See cash earned and what's still in your pipeline." />
@@ -130,6 +136,8 @@ export default function Home() {
       {profile?.v2Visible && (
         <ActionButton manage href="/recruiting" title="Recruiting" sub="Classes, candidates, scorecards, and reporting." />
       )}
+
+      </div>
 
       <p className="note">
         Signed in as {profile?.email} · <button className="link" onClick={logout}>Sign out</button>

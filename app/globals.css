@@ -286,10 +286,73 @@ textarea{font-family:inherit;font-weight:300;font-size:15px;width:100%;padding:1
 .rc-oc.gone{background:#fdeceb;color:#a33527;}
 .rc-oc.noshow{background:#eceef2;color:var(--slate);}
 
+/* Keyboard users need to see where they are. This one applies at every width —
+   it only ever shows while tabbing, so nothing about the touch experience
+   changes. */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--cyan);outline-offset:2px;border-radius:4px;
+}
+
+/* The nav lives in the bottom bar on a phone and in the header on a desktop.
+   Hidden here, switched on in the desktop block below. */
+.topnav{display:none;}
+
+/* ===========================================================================
+   Desktop. Everything from here down is inside the 900px breakpoint, so a
+   phone or tablet renders exactly what it did before any of this existed.
+   =========================================================================== */
 @media(min-width:900px){
-  .wrap.wide{max-width:1060px;padding-left:28px;padding-right:28px;}
+  /* Reading and form pages get a real desktop column instead of a phone one;
+     the data-heavy manager screens keep their wider setting. */
+  .wrap{max-width:780px;padding:38px 28px 64px;}
+  .wrap.wide{max-width:1240px;padding-left:32px;padding-right:32px;}
+
+  /* Nav moves up into the header, so the floating bottom bar goes away. */
+  .header{padding:14px 28px;gap:28px;}
+  .botbar{display:none;}
+  body.hasbar{padding-bottom:0;}
+  .topnav{display:flex;align-items:center;gap:4px;flex:1;justify-content:center;flex-wrap:wrap;}
+  .topnav a{
+    font-weight:500;font-size:13.5px;color:#c7c9d6;text-decoration:none;
+    padding:8px 13px;border-radius:9px;white-space:nowrap;transition:background .12s,color .12s;
+  }
+  .topnav a:hover{background:rgba(255,255,255,.08);color:#fff;}
+  .topnav a.active{background:var(--cyan);color:var(--charcoal);font-weight:700;}
+
+  /* Hub tiles read as a board rather than a long stack. */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+  .tiles .action{margin-bottom:0;height:100%;}
+
+  /* Home: standing and leaderboard side by side. */
+  .homesplit{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;margin-bottom:26px;}
+  .homesplit .card.lbcard{margin-top:0;}
+
+  /* A primary button sized to its words, not to the column. */
+  .btn{width:auto;min-width:260px;padding:15px 34px;}
+  .center .btnghost,.invitebox .btnghost{width:auto;}
+
+  /* Short fields pair up. */
+  .f2desk{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
+
   .cardgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
   .cardgrid .mcard{margin-bottom:0;}
   .rc-cols{flex-direction:row;align-items:flex-start;}
   .rc-col{flex:1;min-width:0;}
+
+  /* Pointer feedback — none of this exists on a touch screen. */
+  .action:hover{border-color:var(--cyan);transform:translateY(-1px);}
+  .action{transition:border-color .12s,transform .12s;}
+  .mcard{transition:box-shadow .12s;}
+  .cardgrid .mcard:hover{box-shadow:0 4px 16px rgba(26,26,46,.07);}
+  .btn:hover:not(:disabled){filter:brightness(1.06);}
+  .btnghost:hover,.pill:hover,.rc-chip:hover,.rc-btnsm:hover:not(:disabled){filter:brightness(.97);}
+  .rc-kcard:hover,.rc-candrow:hover,.rc-personrow:not(:disabled):hover{background:var(--cyanlight);}
+  .rc-row:not(.head):hover{background:var(--offwhite);}
+  .crumbs a:hover{color:var(--cyan);}
+}
+
+/* Very wide screens: the manager tables get more room, but text columns stop
+   growing so lines never get too long to read. */
+@media(min-width:1500px){
+  .wrap.wide{max-width:1400px;}
 }

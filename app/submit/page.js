@@ -86,6 +86,7 @@ export default function Submit() {
 
       {errors.submit && <div className="toast warn">{errors.submit}</div>}
 
+      <div className="f2desk">
       <div className="field">
         <label>Their name</label>
         <input className={errors.name ? "bad" : ""} value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Morgan" />
@@ -102,6 +103,7 @@ export default function Submit() {
           placeholder="(555) 123-4567"
         />
         {errors.phone && <div className="err">Enter a valid 10-digit mobile number.</div>}
+      </div>
       </div>
       <div className="field">
         <label>Which team are they a fit for?</label>

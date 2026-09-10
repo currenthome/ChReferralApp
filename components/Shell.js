@@ -98,7 +98,7 @@ const NAV = [
 ];
 
 export default function Shell({ children, wide = false, nav = true }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [viewAs, setViewAs] = useState(null);
@@ -142,6 +142,22 @@ export default function Shell({ children, wide = false, nav = true }) {
           <div className="wordmark"><span className="cur">CURRENT</span><span className="home">HOME</span></div>
           <div className="subtag">EMPLOYEE REFERRALS</div>
         </Link>
+        {/* On a desktop screen the links live up here instead of in a bar
+            pinned to the bottom. Same links, and they show on every page —
+            including the manager screens, which hide the bottom bar. */}
+        <nav className="topnav">
+          {NAV.map((n) => (
+            <Link key={n.href} href={n.href} className={pathname === n.href ? "active" : undefined}>
+              {n.label === "Refs" ? "My referrals" : n.label}
+            </Link>
+          ))}
+          {(profile?.role === "manager" || profile?.role === "admin") && (
+            <Link href="/manage" className={pathname?.startsWith("/manage") ? "active" : undefined}>Manage</Link>
+          )}
+          {profile?.v2Visible && (
+            <Link href="/recruiting" className={pathname?.startsWith("/recruiting") ? "active" : undefined}>Recruiting</Link>
+          )}
+        </nav>
         <Bell />
       </div>
       <div className={wide ? "wrap wide" : "wrap"}>
