@@ -83,9 +83,11 @@ export default function Hires() {
         {!data && <div className="spinner">Loading…</div>}
         {data && data.hires.length === 0 && <p className="note" style={{ textAlign: "left" }}>No hires yet.</p>}
 
-        {data?.hires.map((h) => (
+        <div className="cardlist">
+          {data?.hires.map((h) => (
           <HireCard key={h.id} h={h} busy={busy} onAction={onAction} />
         ))}
+        </div>
 
         {data && (
           <div style={{ marginTop: 24 }}>

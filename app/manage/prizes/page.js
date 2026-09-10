@@ -94,7 +94,8 @@ export default function ManagePrizes() {
         {Object.entries(grouped).map(([dept, prizes]) => (
           <div key={dept}>
             <div style={{ fontWeight: 700, fontSize: 11, letterSpacing: 1.5, color: "var(--slate)", margin: "20px 0 10px" }}>{dept.toUpperCase()}</div>
-            {prizes.map((p) => (
+            <div className="cardlist">
+              {prizes.map((p) => (
               <div key={p.id} className="mcard">
                 <div className="rtop">
                   <div>
@@ -111,6 +112,7 @@ export default function ManagePrizes() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         ))}
       </ManagerGuard>

@@ -331,6 +331,35 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   .rc-cols{flex-direction:row;align-items:flex-start;}
   .rc-col{flex:1;min-width:0;}
 
+  /* Reading, form and list pages get a desktop column. This only works
+     alongside the rules below that give the content two columns to fill —
+     a wider column on its own just stretches the phone layout. */
+  .wrap{max-width:880px;padding:36px 28px 60px;}
+
+  /* Any repeating list of cards goes two across. */
+  .cardlist{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+  .cardlist > *{margin-bottom:0;}
+  .cardlist .mcard,.cardlist .rcard,.cardlist .ncard,.cardlist .pcard,.cardlist .milecard{margin-bottom:0;height:100%;}
+
+  /* Hub tiles are the only way to the sub-pages, so they stay as tiles —
+     two across, and slimmer than a thumb needs. */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch;}
+  .tiles .action{margin-bottom:0;height:100%;padding:14px 16px;}
+
+  /* Short fields pair up. */
+  .f2desk{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
+
+  /* Summary figures line up with the rest of the page rather than sitting
+     centred in wide, mostly empty boxes. */
+  .summary{gap:12px;}
+  .stat{padding:13px 16px;text-align:left;}
+  .stat .sv{font-size:27px;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .stat .sl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);}
+
+  /* A primary button sized to its words, not to the column. */
+  .btn{width:auto;min-width:250px;padding:15px 32px;}
+  .invitebox .btn,.pactions .btn{min-width:0;}
+
   /* --- Home, desktop --- */
   .deskonly{display:block;}
   .mobonly{display:none;}

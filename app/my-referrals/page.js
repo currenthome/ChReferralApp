@@ -93,6 +93,7 @@ export default function MyReferrals() {
         </p>
       )}
 
+      <div className="cardlist">
       {refs.map((r) => {
         const b = badge(r);
         const open = openId === r.id;
@@ -120,6 +121,7 @@ export default function MyReferrals() {
           </div>
         );
       })}
+      </div>
     </Shell>
   );
 }

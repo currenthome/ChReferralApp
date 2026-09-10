@@ -98,7 +98,8 @@ export default function People() {
 
         {!data && <div className="spinner">Loading…</div>}
 
-        {data?.invites.map((p) => (
+        <div className="cardlist">
+          {data?.invites.map((p) => (
           <div key={p.email} className="pcard">
             <div className="ptop">
               <div>
@@ -112,8 +113,10 @@ export default function People() {
             </div>
           </div>
         ))}
+        </div>
 
-        {data?.people.map((p) => (
+        <div className="cardlist">
+          {data?.people.map((p) => (
           <div key={p.uid} className="pcard">
             <div className="ptop">
               <div>
@@ -164,6 +167,7 @@ export default function People() {
             </div>
           </div>
         ))}
+        </div>
       </ManagerGuard>
     </Shell>
   );

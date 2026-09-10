@@ -40,6 +40,7 @@ export default function Earnings() {
         </p>
       )}
 
+      <div className="cardlist">
       {withPayouts.map((r) => (
         <div key={r.id} className="mcard">
           <div className="rtop">
@@ -62,6 +63,7 @@ export default function Earnings() {
           ))}
         </div>
       ))}
+      </div>
 
       <p className="note">
         Pipeline unlocks as your referrals get hired and reach each payout milestone. If someone leaves before a milestone, that payout is voided — but anything already earned is yours.

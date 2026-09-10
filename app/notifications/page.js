@@ -45,6 +45,7 @@ export default function Notifications() {
       {!items && <div className="spinner">Loading…</div>}
       {items && items.length === 0 && <p className="note">You're all caught up.</p>}
 
+      <div className="cardlist">
       {items?.map((n) => (
         <div key={n.id} className={`ncard ${n.read ? "read" : "unread"}`}>
           <div className="ndot" />
@@ -60,6 +61,7 @@ export default function Notifications() {
           </div>
         </div>
       ))}
+      </div>
     </Shell>
   );
 }

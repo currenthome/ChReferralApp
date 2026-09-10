@@ -83,7 +83,8 @@ export default function Scoring() {
             </div>
           ))}
 
-        {scoring?.custom?.map((m) => (
+        <div className="cardlist">
+          {scoring?.custom?.map((m) => (
           <div key={m.id} className="milecard">
             <div className="mn">
               <div className="t">{m.name}</div>
@@ -102,6 +103,7 @@ export default function Scoring() {
             </button>
           </div>
         ))}
+        </div>
 
         {scoring && !showAdd && (
           <button className="inviteopen" style={{ marginTop: 8 }} onClick={() => setShowAdd(true)}>+ Add milestone</button>

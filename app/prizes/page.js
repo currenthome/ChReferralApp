@@ -25,6 +25,7 @@ export default function Prizes() {
         <p className="note" style={{ textAlign: "left" }}>No active challenges right now — check back soon.</p>
       )}
 
+      <div className="cardlist">
       {data.prizes.map((p) => {
         const isTarget = p.type === "Target";
         const pct = isTarget
@@ -80,6 +81,7 @@ export default function Prizes() {
           </div>
         );
       })}
+      </div>
     </Shell>
   );
 }
