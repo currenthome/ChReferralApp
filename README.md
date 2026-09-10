@@ -33,6 +33,8 @@ Above it:
 - Manager and recruiting screens (`<Shell wide>`) run to 1240px, 1400px past a 1500px window.
 - Keyboard focus outlines apply at **every** width — tabbing with no visible focus was a defect, and an outline that only shows while tabbing can't affect a touch screen.
 
+Reading, form and list pages run to 880px, and their content fills it: every repeating list of cards is wrapped in a `.cardlist` that lays out two across above the breakpoint and does nothing below it. Hub tiles go two across and slimmer. Short fields pair up inside an `.f2desk`. That pairing matters — a wider column on its own just stretches the phone layout, which is what the first attempt got wrong.
+
 **Home has two layouts, not one that stretches.** Both are in the page; `.mobonly` and `.deskonly` switch between them at the breakpoint. The desktop one is a four-figure strip (rank, points this month, referrals in play, cash paid), the standings as a table with hires beside points, and one column with the single real button plus quiet links. The phone one is the original hero, bar chart and tiles.
 
 That pattern — a second layout rather than a wider one — is the approach for any other screen that needs a desktop design. Widening the phone layout was tried first and pulled back: two columns of phone components reads as a wide phone, not a desktop page.
