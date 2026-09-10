@@ -300,11 +300,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 /* ===========================================================================
    Desktop. Everything from here down is inside the 900px breakpoint, so a
    phone or tablet renders exactly what it did before any of this existed.
+   Deliberately narrow in scope: the nav moves into the header, the data-heavy
+   manager screens get room, and a pointer gets feedback. Laying the phone
+   components out in two columns was tried and pulled back — widening a phone
+   layout is not a desktop layout, and it read as half-finished. A real
+   per-screen desktop design is the open piece of work.
    =========================================================================== */
 @media(min-width:900px){
-  /* Reading and form pages get a real desktop column instead of a phone one;
-     the data-heavy manager screens keep their wider setting. */
-  .wrap{max-width:780px;padding:38px 28px 64px;}
   .wrap.wide{max-width:1240px;padding-left:32px;padding-right:32px;}
 
   /* Nav moves up into the header, so the floating bottom bar goes away. */
@@ -318,21 +320,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
   }
   .topnav a:hover{background:rgba(255,255,255,.08);color:#fff;}
   .topnav a.active{background:var(--cyan);color:var(--charcoal);font-weight:700;}
-
-  /* Hub tiles read as a board rather than a long stack. */
-  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
-  .tiles .action{margin-bottom:0;height:100%;}
-
-  /* Home: standing and leaderboard side by side. */
-  .homesplit{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;margin-bottom:26px;}
-  .homesplit .card.lbcard{margin-top:0;}
-
-  /* A primary button sized to its words, not to the column. */
-  .btn{width:auto;min-width:260px;padding:15px 34px;}
-  .center .btnghost,.invitebox .btnghost{width:auto;}
-
-  /* Short fields pair up. */
-  .f2desk{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
 
   .cardgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
   .cardgrid .mcard{margin-bottom:0;}
