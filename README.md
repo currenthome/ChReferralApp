@@ -23,6 +23,22 @@ Internal web app for employee referrals: submit referrals, track them through th
 
 Roles live on the user record in Firestore (`users.role`: `employee` | `manager` | `admin`). The `ADMIN_EMAILS` env var only bootstraps first-login manager access; it never downgrades an admin.
 
+## Phone and desktop
+
+One breakpoint, at 900px. Below it, the app is exactly what it always was — a 460px column with the nav in a bar pinned to the bottom. Nothing in the desktop work touches it.
+
+Above it:
+
+- The nav moves into the dark header on every page, including the manager and recruiting screens, which previously had none. The bottom bar is hidden.
+- Manager and recruiting screens (`<Shell wide>`) run to 1240px, 1400px past a 1500px window.
+- Keyboard focus outlines apply at **every** width — tabbing with no visible focus was a defect, and an outline that only shows while tabbing can't affect a touch screen.
+
+**Home has two layouts, not one that stretches.** Both are in the page; `.mobonly` and `.deskonly` switch between them at the breakpoint. The desktop one is a four-figure strip (rank, points this month, referrals in play, cash paid), the standings as a table with hires beside points, and one column with the single real button plus quiet links. The phone one is the original hero, bar chart and tiles.
+
+That pattern — a second layout rather than a wider one — is the approach for any other screen that needs a desktop design. Widening the phone layout was tried first and pulled back: two columns of phone components reads as a wide phone, not a desktop page.
+
+To check a desktop layout without signing in, screenshot the real markup against the real stylesheet rather than guessing; the Playwright runtime at `~/.claude/.sf-docs-runtime/venv` can do it against a static harness.
+
 ## Recruiting access (v2)
 
 The recruiting side — classes, candidates, interviews and scorecards, reporting, forecast — lives under `/recruiting` and has its own access, separate from the referral roles above.
