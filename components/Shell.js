@@ -97,6 +97,13 @@ const NAV = [
   { href: "/share", label: "Share", icon: <><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" /></> },
 ];
 
+// Screens that live in the desktop header but not the phone's bottom bar —
+// the bar holds five and is sized for thumbs, so it keeps exactly what it had.
+const DESKTOP_ONLY_NAV = [
+  { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/prizes", label: "Prizes" },
+];
+
 export default function Shell({ children, wide = false, nav = true }) {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
@@ -149,6 +156,11 @@ export default function Shell({ children, wide = false, nav = true }) {
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className={pathname === n.href ? "active" : undefined}>
               {n.label === "Refs" ? "My referrals" : n.label}
+            </Link>
+          ))}
+          {DESKTOP_ONLY_NAV.map((n) => (
+            <Link key={n.href} href={n.href} className={pathname === n.href ? "active" : undefined}>
+              {n.label}
             </Link>
           ))}
           {(profile?.role === "manager" || profile?.role === "admin") && (

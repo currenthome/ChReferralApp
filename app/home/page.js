@@ -229,6 +229,7 @@ export default function Home() {
                   <Link href="/my-referrals">My referrals <span>{money ? `${open} open` : ""}</span></Link>
                   <Link href="/earnings">My earnings <span>{money ? `$${money.earned.toLocaleString()} paid` : ""}</span></Link>
                   <Link href="/prizes">Prizes &amp; goals <span>{board?.banner ? "1 running" : ""}</span></Link>
+                  <Link href="/leaderboard">Leaderboard <span>your team or company-wide</span></Link>
                   <Link href="/share">Share &amp; recruit <span>link + QR</span></Link>
                 </div>
               </div>
