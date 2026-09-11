@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import V2Guard from "@/components/V2Guard";
 import { useAuth } from "@/components/AuthProvider";
@@ -12,15 +12,18 @@ import { Modal, StageBadge, initials, fmtDate } from "@/components/recruiting/ui
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-function RequestClass({ profile, roles, onClose, onDone }) {
+function RequestClass({ profile, roles, editing, onClose, onDone }) {
   const lockedDept = profile?.v2Access === "dept-manager" ? profile.dept : null;
-  const [dept, setDept] = useState(lockedDept || DEPARTMENTS[0]);
-  const [role, setRole] = useState("");
-  const [date, setDate] = useState(today());
-  const [target, setTarget] = useState(10);
-  const [location, setLocation] = useState("");
+  const [dept, setDept] = useState(editing?.dept || lockedDept || DEPARTMENTS[0]);
+  const [role, setRole] = useState(editing?.role || "");
+  const [date, setDate] = useState(editing?.date || today());
+  const [target, setTarget] = useState(editing?.target ?? 10);
+  const [location, setLocation] = useState(editing?.location === "TBD" ? "" : editing?.location || "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // A class with people lined up for it can change its date, location and
+  // size, but not its department or role — they'd be stranded.
+  const seated = (editing?.seats?.hired || 0) + (editing?.seats?.pending || 0);
 
   const deptRoles = roles[dept] || [];
   useEffect(() => {
@@ -31,10 +34,27 @@ function RequestClass({ profile, roles, onClose, onDone }) {
     setBusy(true);
     setErr("");
     try {
-      const res = await api("/api/recruiting/classes", {
-        method: "POST",
-        body: { dept, role, date, target: Number(target), location },
-      });
+      const res = editing
+        ? await api(`/api/recruiting/classes/${editing.id}`, {
+            method: "POST",
+            body: { action: "edit", dept, role, date, target: Number(target), location },
+          })
+        : await api("/api/recruiting/classes", {
+            method: "POST",
+            body: { dept, role, date, target: Number(target), location },
+          });
+      onDone(res.message);
+    } catch (e) {
+      setErr(e.message);
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await api(`/api/recruiting/classes/${editing.id}`, { method: "DELETE" });
       onDone(res.message);
     } catch (e) {
       setErr(e.message);
@@ -44,15 +64,26 @@ function RequestClass({ profile, roles, onClose, onDone }) {
 
   return (
     <Modal
-      title="Request a class"
+      title={editing ? "Edit class" : "Request a class"}
       onClose={onClose}
       footer={
         <>
+          {editing && (
+            <button
+              className="rc-btnsm danger"
+              style={{ marginRight: "auto" }}
+              disabled={busy || seated > 0}
+              title={seated > 0 ? "Take the candidates out of this class first" : "Delete this class"}
+              onClick={remove}
+            >
+              Delete class
+            </button>
+          )}
           <button className="rc-btnsm ghost" onClick={onClose} disabled={busy}>
             Cancel
           </button>
           <button className="rc-btnsm" onClick={save} disabled={busy}>
-            {busy ? "Requesting…" : "Request class"}
+            {busy ? "Saving…" : editing ? "Save changes" : "Request class"}
           </button>
         </>
       }
@@ -61,7 +92,7 @@ function RequestClass({ profile, roles, onClose, onDone }) {
       <div className="rc-f2">
         <div className="field">
           <label>Department</label>
-          <select value={dept} onChange={(e) => setDept(e.target.value)} disabled={!!lockedDept}>
+          <select value={dept} onChange={(e) => setDept(e.target.value)} disabled={!!lockedDept || seated > 0}>
             {DEPARTMENTS.map((d) => (
               <option key={d}>{d}</option>
             ))}
@@ -70,7 +101,7 @@ function RequestClass({ profile, roles, onClose, onDone }) {
         </div>
         <div className="field">
           <label>Role</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <select value={role} onChange={(e) => setRole(e.target.value)} disabled={seated > 0}>
             {deptRoles.map((r) => (
               <option key={r}>{r}</option>
             ))}
@@ -92,6 +123,12 @@ function RequestClass({ profile, roles, onClose, onDone }) {
         <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Riverside Office, Remote / Phoenix" />
         <div className="rc-hint">Free text — wherever this class will run.</div>
       </div>
+      {seated > 0 && (
+        <p className="rc-note" style={{ marginBottom: 0 }}>
+          {seated} {seated === 1 ? "person is" : "people are"} lined up for this class, so its department and
+          role are fixed. Date, location and size can still change.
+        </p>
+      )}
     </Modal>
   );
 }
@@ -104,6 +141,7 @@ export default function Classes() {
   const [dept, setDept] = useState("all");
   const [toast, setToast] = useState("");
   const [asking, setAsking] = useState(false);
+  const [editingClass, setEditingClass] = useState(null);
   const [adding, setAdding] = useState(false);
   const [open, setOpen] = useState(null);
 
@@ -143,6 +181,15 @@ export default function Classes() {
   const scoped = (data?.classes || []).filter((c) => dept === "all" || c.dept === dept);
   const allDepts = profile?.v2Access !== "dept-manager";
 
+  // Soonest first is what you want while you're filling classes. Ones that
+  // have already run go underneath, most recent first, so a class from last
+  // year isn't the first thing on the screen.
+  const stamp = today();
+  const upcoming = scoped.filter((c) => c.date >= stamp).sort((a, b) => a.date.localeCompare(b.date));
+  const past = scoped.filter((c) => c.date < stamp).sort((a, b) => b.date.localeCompare(a.date));
+  const shown = [...upcoming, ...past];
+  const thisYear = stamp.slice(0, 4);
+
   return (
     <Shell wide nav={false}>
       <V2Guard>
@@ -176,8 +223,10 @@ export default function Classes() {
         )}
 
         <div className="cardgrid">
-          {scoped.map((c) => {
+          {shown.map((c, i) => {
             const d = fmtDate(c.date);
+            // One divider, where the upcoming ones end and the old ones start.
+            const startsPast = c.date < stamp && (i === 0 || shown[i - 1].date >= stamp);
             const pct = c.target ? Math.round((c.seats.hired / c.target) * 100) : 0;
             const seats = [
               ...Array(c.seats.hired).fill("filled"),
@@ -185,7 +234,13 @@ export default function Classes() {
               ...Array(c.seats.open).fill("open"),
             ];
             return (
-              <div key={c.id} className="mcard">
+              <Fragment key={c.id}>
+              {startsPast && (
+                <div className="rc-sech gridfull">
+                  Already run<span className="sub">most recent first</span>
+                </div>
+              )}
+              <div className="mcard">
                 <div className="rtop">
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                     <div className="rc-datechip">
@@ -197,9 +252,17 @@ export default function Classes() {
                       <div className="rmeta">
                         {c.dept} · {c.location}
                       </div>
-                      <div className="rmeta">{d.weekday}</div>
+                      {/* The year only shows when it isn't this one — without it
+                          a 2025 class reads as out of order next to a 2026 one. */}
+                      <div className="rmeta">
+                        {d.weekday}
+                        {c.date.slice(0, 4) !== thisYear ? ` · ${c.date.slice(0, 4)}` : ""}
+                      </div>
                     </div>
                   </div>
+                  <button className="rc-btnsm ghost" onClick={() => setEditingClass(c)}>
+                    Edit
+                  </button>
                 </div>
 
                 <div className="rc-seats">
@@ -250,17 +313,23 @@ export default function Classes() {
                   )}
                 </div>
               </div>
+              </Fragment>
             );
           })}
         </div>
 
-        {asking && (
+        {(asking || editingClass) && (
           <RequestClass
             profile={profile}
             roles={roles}
-            onClose={() => setAsking(false)}
+            editing={editingClass}
+            onClose={() => {
+              setAsking(false);
+              setEditingClass(null);
+            }}
             onDone={(m) => {
               setAsking(false);
+              setEditingClass(null);
               refresh(m);
             }}
           />
