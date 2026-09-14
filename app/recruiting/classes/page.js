@@ -23,7 +23,9 @@ function RequestClass({ profile, roles, editing, onClose, onDone }) {
   const [err, setErr] = useState("");
   // A class with people lined up for it can change its date, location and
   // size, but not its department or role — they'd be stranded.
-  const seated = (editing?.seats?.hired || 0) + (editing?.seats?.pending || 0);
+  // Everyone still pointing at the class, rejected included — the same count
+  // the server uses, so the screen never promises something it will refuse.
+  const seated = editing?.attached ?? 0;
 
   const deptRoles = roles[dept] || [];
   useEffect(() => {
@@ -72,8 +74,7 @@ function RequestClass({ profile, roles, editing, onClose, onDone }) {
             <button
               className="rc-btnsm danger"
               style={{ marginRight: "auto" }}
-              disabled={busy || seated > 0}
-              title={seated > 0 ? "Take the candidates out of this class first" : "Delete this class"}
+              disabled={busy}
               onClick={remove}
             >
               Delete class
@@ -125,8 +126,9 @@ function RequestClass({ profile, roles, editing, onClose, onDone }) {
       </div>
       {seated > 0 && (
         <p className="rc-note" style={{ marginBottom: 0 }}>
-          {seated} {seated === 1 ? "person is" : "people are"} lined up for this class, so its department and
-          role are fixed. Date, location and size can still change.
+          {seated} {seated === 1 ? "person is" : "people are"} in this class, so its department and role are
+          fixed, and it can't be deleted. Date, location and size can still change. To empty it, open each
+          person from the Pipeline and change their class — or delete them if they were added by mistake.
         </p>
       )}
     </Modal>

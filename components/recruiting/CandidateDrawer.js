@@ -27,6 +27,7 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
   const [hireOpen, setHireOpen] = useState(false);
   const [scoring, setScoring] = useState(null);
   const [viewing, setViewing] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const cls = classes.find((c) => c.id === candidate.classId) || null;
   const interviewers = people.filter((p) => p.allDepts || p.dept === candidate.dept);
@@ -104,6 +105,30 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
             <div className="toast warn">
               {candidate.referralMatches} employee referrals share this mobile number, so nobody was
               credited as the referrer. Someone needs to work out which one is right.
+            </div>
+          )}
+
+          {canWork && candidate.stage !== "hired" && (
+            <div className="rc-sec">
+              <h4>Class</h4>
+              {/* Put in the wrong class? Move them, or take them out — the
+                  list is every upcoming class for their role. */}
+              <select
+                value={candidate.classId || ""}
+                disabled={busy}
+                onChange={(e) => act({ action: "setClass", classId: e.target.value })}
+              >
+                <option value="">Not in a class</option>
+                {classes
+                  .filter((c) => c.dept === candidate.dept && c.role === candidate.role)
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {fmtDate(c.date).mon} {fmtDate(c.date).day} · {c.location}
+                    </option>
+                  ))}
+              </select>
+              <div className="rc-hint">Only classes for {candidate.role} show.</div>
             </div>
           )}
 
@@ -215,6 +240,16 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
                   ✓ Hired — first day {candidate.startDate ? fmtDate(candidate.startDate).full : "not set"}
                 </div>
               )}
+              {candidate.stage !== "hired" && (
+                <button
+                  className="rc-btnsm danger"
+                  style={{ width: "100%", marginTop: 6 }}
+                  disabled={busy}
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  Delete candidate
+                </button>
+              )}
             </div>
           ) : (
             <div className="rc-note">View only — this candidate is outside your department.</div>
@@ -291,6 +326,48 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
               <input type="time" value={iv.time} onChange={(e) => setIv({ ...iv, time: e.target.value })} />
             </div>
           </div>
+        </Modal>
+      )}
+
+      {confirmDelete && (
+        <Modal
+          title={`Delete ${candidate.name}?`}
+          onClose={() => setConfirmDelete(false)}
+          footer={
+            <>
+              <button className="rc-btnsm ghost" onClick={() => setConfirmDelete(false)} disabled={busy}>
+                Cancel
+              </button>
+              <button
+                className="rc-btnsm danger"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setErr("");
+                  try {
+                    const res = await api(`/api/recruiting/candidates/${candidate.id}`, { method: "DELETE" });
+                    setConfirmDelete(false);
+                    onClose();
+                    await onChanged(res.message);
+                  } catch (e) {
+                    setErr(e.message);
+                    setBusy(false);
+                  }
+                }}
+              >
+                Delete
+              </button>
+            </>
+          }
+        >
+          <p className="rc-note" style={{ marginTop: 0 }}>
+            This removes {candidate.name} and their {candidate.interviews?.length || 0} interview
+            {candidate.interviews?.length === 1 ? "" : "s"} for good. It can't be undone.
+          </p>
+          <p className="rc-note" style={{ marginBottom: 0 }}>
+            For someone who's simply not a fit, <b>Reject</b> is usually the better move — it keeps the record
+            of them having applied. Delete is for entries made by mistake.
+          </p>
         </Modal>
       )}
 

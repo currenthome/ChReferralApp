@@ -27,6 +27,9 @@ export async function GET(request) {
       const mine = candidates.filter((p) => p.classId === c.id);
       return {
         ...c,
+        // Seats ignore rejected candidates; this counts everyone still
+        // pointing at the class, which is what blocks deleting or moving it.
+        attached: mine.length,
         seats: seatState(mine, c.target),
         candidates: mine
           .filter((p) => p.stage !== "rejected")

@@ -157,6 +157,42 @@ export async function GET(request, { params }) {
   });
 }
 
+// Someone entered by mistake can be removed outright. A hired candidate can't:
+// their class report counts them, and if they were referred, their hire is what
+// started the referrer's points — deleting them would quietly break both.
+export async function DELETE(request, { params }) {
+  const { user, db, error, v2 } = await requireV2(request);
+  if (error) return error;
+
+  const { id } = await params;
+  const loaded = await loadCandidate(db, id, v2);
+  if (loaded.error) return loaded.error;
+  const { ref, candidate } = loaded;
+
+  if (candidate.stage === "hired") {
+    return jsonError(
+      `${candidate.name} has been hired, so they can't be deleted — their class report counts them, and a referral may be paying out on them.`,
+      403
+    );
+  }
+
+  // Their interviews live underneath them and go too.
+  const ivs = await ref.collection("interviews").get();
+  for (const iv of ivs.docs) await iv.ref.delete();
+  await ref.delete();
+
+  await audit(db, user, "v2.candidate.delete", id, {
+    name: candidate.name,
+    dept: candidate.dept,
+    role: candidate.role,
+    stage: candidate.stage,
+    interviewsRemoved: ivs.size,
+    referralId: candidate.referralId || null,
+  });
+
+  return NextResponse.json({ ok: true, message: `${candidate.name} deleted.` });
+}
+
 export async function POST(request, { params }) {
   const { user, db, error, v2 } = await requireV2(request);
   if (error) return error;
