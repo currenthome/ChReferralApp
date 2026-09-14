@@ -131,9 +131,10 @@ export async function POST(request, { params }) {
   return jsonError("Unknown action");
 }
 
-// Deleting a class is for one requested by mistake. A class with people in it
-// stays put — those candidates would otherwise point at nothing, and a class
-// that has already run is the record its report is built from.
+// Deleting a class is for one requested by mistake. Only a hired candidate
+// stops it: they're what the class's report counts. Anyone still interviewing,
+// on hold or rejected appears in no report, so they're simply taken out of the
+// class rather than standing in the way of removing it.
 export async function DELETE(request, { params }) {
   const { user, db, error, v2 } = await requireV2(request);
   if (error) return error;
@@ -144,12 +145,16 @@ export async function DELETE(request, { params }) {
   const { ref, cls } = loaded;
 
   const attached = await db.collection("candidates").where("classId", "==", id).get();
-  if (!attached.empty) {
-    const names = attached.docs.slice(0, 3).map((d) => d.data().name).join(", ");
+  const hired = attached.docs.filter((d) => d.data().stage === "hired");
+  if (hired.length) {
+    const names = hired.slice(0, 3).map((d) => d.data().name).join(", ");
     return jsonError(
-      `${attached.size} candidate${attached.size === 1 ? " is" : "s are"} in this class (${names}${attached.size > 3 ? "…" : ""}). Move them to another class or take them out of this one first.`
+      `${hired.length} hired candidate${hired.length === 1 ? " is" : "s are"} in this class (${names}${hired.length > 3 ? "…" : ""}). A class its hires are counted against can't be deleted — move them to another class first.`
     );
   }
+
+  const detached = attached.docs.filter((d) => d.data().stage !== "hired");
+  for (const d of detached) await d.ref.update({ classId: null });
 
   await ref.delete();
   await audit(db, user, "v2.class.delete", id, {
@@ -157,6 +162,12 @@ export async function DELETE(request, { params }) {
     role: cls.role,
     date: cls.date,
     location: cls.location,
+    detached: detached.map((d) => d.data().name),
   });
-  return NextResponse.json({ ok: true, message: `${cls.role} class on ${cls.date} deleted.` });
+  return NextResponse.json({
+    ok: true,
+    message: detached.length
+      ? `${cls.role} class on ${cls.date} deleted. ${detached.length} candidate${detached.length === 1 ? " is" : "s are"} now not in a class.`
+      : `${cls.role} class on ${cls.date} deleted.`,
+  });
 }

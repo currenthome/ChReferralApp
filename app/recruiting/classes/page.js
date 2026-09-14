@@ -26,6 +26,9 @@ function RequestClass({ profile, roles, editing, onClose, onDone }) {
   // Everyone still pointing at the class, rejected included — the same count
   // the server uses, so the screen never promises something it will refuse.
   const seated = editing?.attached ?? 0;
+  // Only hired candidates stop a class being deleted; everyone else is simply
+  // taken out of it, so the wording has to tell those two cases apart.
+  const hiredHere = editing?.seats?.hired ?? 0;
 
   const deptRoles = roles[dept] || [];
   useEffect(() => {
@@ -127,8 +130,10 @@ function RequestClass({ profile, roles, editing, onClose, onDone }) {
       {seated > 0 && (
         <p className="rc-note" style={{ marginBottom: 0 }}>
           {seated} {seated === 1 ? "person is" : "people are"} in this class, so its department and role are
-          fixed, and it can't be deleted. Date, location and size can still change. To empty it, open each
-          person from the Pipeline and change their class — or delete them if they were added by mistake.
+          fixed. Date, location and size can still change.
+          {hiredHere > 0
+            ? ` It can't be deleted while ${hiredHere === 1 ? "someone" : `${hiredHere} people`} hired into it ${hiredHere === 1 ? "is" : "are"} counted against it.`
+            : " Deleting it is fine — everyone in it is still interviewing, on hold or rejected, so they'll simply end up not in a class."}
         </p>
       )}
     </Modal>

@@ -34,6 +34,24 @@ export async function DELETE(request) {
   const removed = {};
   let total = 0;
 
+  // A real candidate can end up in a demo class while people are learning the
+  // tool. Take them out before the class goes, or they'd point at nothing.
+  const demoClassIds = new Set(
+    (await db.collection("classes").where("demo", "==", true).get()).docs.map((d) => d.id)
+  );
+  let detached = 0;
+  if (demoClassIds.size) {
+    const candSnap = await db.collection("candidates").get();
+    for (const d of candSnap.docs) {
+      const c = d.data();
+      if (c.demo === true) continue;
+      if (c.classId && demoClassIds.has(c.classId)) {
+        await d.ref.update({ classId: null });
+        detached += 1;
+      }
+    }
+  }
+
   for (const name of COLLECTIONS) {
     const snap = await db.collection(name).where("demo", "==", true).get();
     if (!snap.size) continue;
@@ -52,14 +70,17 @@ export async function DELETE(request) {
     total += snap.size;
   }
 
-  await audit(db, user, "v2.demo.purge", "demo", { removed, total });
+  await audit(db, user, "v2.demo.purge", "demo", { removed, total, detached });
 
   return NextResponse.json({
     ok: true,
     removed,
     total,
+    detached,
     message: total
-      ? `Removed ${total} demo record${total === 1 ? "" : "s"}. Real data untouched.`
+      ? `Removed ${total} demo record${total === 1 ? "" : "s"}. Real data untouched.${
+          detached ? ` ${detached} real candidate${detached === 1 ? " was" : "s were"} taken out of a demo class first.` : ""
+        }`
       : "There was no demo data left to remove.",
   });
 }
