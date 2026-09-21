@@ -73,13 +73,24 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
     if (!deptRoles.includes(role)) setRole(deptRoles[0] || "");
   }, [dept, deptRoles, role]);
 
-  // Every class still to come, whatever the department — a recruiter thinks
-  // "put them in that class", so the class is what they pick, and the
-  // department and role follow from it.
-  const classOpts = classes
-    .filter((c) => c.date >= today())
-    .sort((a, b) => a.date.localeCompare(b.date));
+  // Every class, whatever the department — a recruiter thinks "put them in
+  // that class", so the class is what they pick, and the department and role
+  // follow from it. Classes that have already run stay on the list, because
+  // months of past hiring have to be enterable against the class they ran in.
+  const stamp = today();
+  const classOpts = [...classes].sort((a, b) => a.date.localeCompare(b.date));
+  const upcomingOpts = classOpts.filter((c) => c.date >= stamp);
+  const pastOpts = classOpts.filter((c) => c.date < stamp).reverse();
   const chosenClass = classOpts.find((c) => c.id === form.classId) || null;
+
+  // The year only matters on a class from another one — without it a 2025
+  // class reads as out of order next to a 2026 one.
+  const thisYear = stamp.slice(0, 4);
+  function classLabel(c) {
+    const d = fmtDate(c.date);
+    const year = c.date.slice(0, 4) !== thisYear ? ` ${c.date.slice(0, 4)}` : "";
+    return `${c.role} · ${d.mon} ${d.day}${year} · ${c.location}${lockedDept ? "" : ` (${c.dept})`}`;
+  }
 
   function pickClass(id) {
     setForm((f) => ({ ...f, classId: id }));
@@ -227,16 +238,28 @@ export default function AddCandidate({ profile, roles, classes, people, onClose,
         <label>Which class are they for?</label>
         <select value={form.classId} onChange={(e) => pickClass(e.target.value)}>
           <option value="">Not in a class</option>
-          {classOpts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.role} · {fmtDate(c.date).mon} {fmtDate(c.date).day} · {c.location}
-              {lockedDept ? "" : ` (${c.dept})`}
-            </option>
-          ))}
+          {upcomingOpts.length > 0 && (
+            <optgroup label="Coming up">
+              {upcomingOpts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {classLabel(c)}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {pastOpts.length > 0 && (
+            <optgroup label="Already run">
+              {pastOpts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {classLabel(c)}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
         <div className="rc-hint">
           {classOpts.length === 0
-            ? "No classes coming up yet — request one on the Classes screen, or leave this as it is."
+            ? "No classes yet — request one on the Classes screen, or leave this as it is."
             : chosenClass
             ? "This sets their department and role to match the class."
             : "Pick the class and the department and role fill themselves in. Leave it unset for a hire with no class."}

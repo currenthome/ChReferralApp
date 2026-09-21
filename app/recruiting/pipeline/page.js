@@ -59,6 +59,7 @@ export default function Pipeline() {
   const allDepts = profile?.v2Access !== "dept-manager";
   const onHold = scoped.filter((c) => c.stage === "on_hold");
   const rejected = scoped.filter((c) => c.stage === "rejected");
+  const offerRejected = scoped.filter((c) => c.stage === "offer_rejected");
 
   function nextLine(c) {
     const next = c.interviews?.find((i) => i.status === "scheduled");
@@ -129,6 +130,16 @@ export default function Pipeline() {
               <div className="rc-sidebar">
                 <span className="lbl">ON HOLD ({onHold.length})</span>
                 {onHold.map((c) => (
+                  <button key={c.id} className="rc-chip" onClick={() => setOpenId(c.id)}>
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {offerRejected.length > 0 && (
+              <div className="rc-sidebar">
+                <span className="lbl">OFFER REJECTED ({offerRejected.length})</span>
+                {offerRejected.map((c) => (
                   <button key={c.id} className="rc-chip" onClick={() => setOpenId(c.id)}>
                     {c.name}
                   </button>

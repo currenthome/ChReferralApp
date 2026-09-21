@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { api } from "@/lib/firebaseClient";
-import { INTERVIEW_TYPES, INTERVIEW_LABEL, STAGE_LABEL } from "@/lib/recruiting";
+import {
+  INTERVIEW_TYPES,
+  INTERVIEW_LABEL,
+  INTERVIEW_CLOSED_LABEL,
+  STAGE_LABEL,
+} from "@/lib/recruiting";
 import { Modal, fmtDate, fmtDT } from "./ui";
 import ScoreInterview, { ScorecardView } from "./ScoreInterview";
 
@@ -13,10 +18,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 // them; these buttons just avoid offering a move that would be refused.
 function movesFor(stage) {
   if (stage === "interviewing") return [["offer_extended", "Extend offer"], ["on_hold", "Put on hold"], ["rejected", "Reject"]];
-  if (stage === "offer_extended") return [["offer_accepted", "Offer accepted"], ["on_hold", "Put on hold"], ["rejected", "Reject"]];
-  if (stage === "offer_accepted") return [["rejected", "Reject"]];
+  if (stage === "offer_extended") return [["offer_accepted", "Offer accepted"], ["offer_rejected", "Offer Rejected"], ["on_hold", "Put on hold"], ["rejected", "Reject"]];
+  if (stage === "offer_accepted") return [["offer_rejected", "Offer Rejected"], ["rejected", "Reject"]];
   if (stage === "on_hold") return [["interviewing", "Resume interviewing"], ["rejected", "Reject"]];
   if (stage === "rejected") return [["interviewing", "Reopen candidate"]];
+  if (stage === "offer_rejected") return [["interviewing", "Reopen candidate"]];
   return [];
 }
 
@@ -24,6 +30,8 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [schedOpen, setSchedOpen] = useState(false);
+  // Rescheduling reuses the scheduling form, prefilled with what is booked now.
+  const [rescheduling, setRescheduling] = useState(null);
   const [hireOpen, setHireOpen] = useState(false);
   const [scoring, setScoring] = useState(null);
   const [viewing, setViewing] = useState(null);
@@ -52,6 +60,29 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
   }
 
   const scheduled = candidate.interviews?.filter((i) => i.status === "scheduled") || [];
+
+  function openSchedule() {
+    setIv({ type: "phone", date: today(), time: "10:00", interviewerUid: "" });
+    setSchedOpen(true);
+  }
+
+  // The form opens on what is booked now, so moving an interview by an hour
+  // is one field, not four.
+  function openReschedule(i) {
+    const [d, t] = String(i.datetime || "").split("T");
+    setIv({
+      type: i.type,
+      date: d || today(),
+      time: (t || "10:00").slice(0, 5),
+      interviewerUid: i.interviewerUid || "",
+    });
+    setRescheduling(i);
+  }
+
+  function closeSchedule() {
+    setSchedOpen(false);
+    setRescheduling(null);
+  }
 
   return (
     <>
@@ -174,11 +205,13 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
             <h4>Interviews</h4>
             {candidate.interviews?.length ? (
               candidate.interviews.map((i) => (
-                <div key={i.id} className={`rc-iv${i.status === "completed" ? " done" : ""}`}>
+                <div key={i.id} className={`rc-iv${i.status !== "scheduled" ? " done" : ""}`}>
                   <div className="r1">
                     <span className="tt">{INTERVIEW_LABEL[i.type]}</span>
                     {i.status === "completed" ? (
                       <span className="rc-stage s-hired">{i.score != null ? `${i.score}/10` : "Done"}</span>
+                    ) : INTERVIEW_CLOSED_LABEL[i.status] ? (
+                      <span className="rc-stage s-rejected">{INTERVIEW_CLOSED_LABEL[i.status]}</span>
                     ) : (
                       <span className="rc-stage s-interviewing">Scheduled</span>
                     )}
@@ -192,18 +225,35 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
                     </div>
                   ) : null}
                   {i.status === "completed" && i.notes ? <div className="r2">{i.notes}</div> : null}
-                  <div style={{ marginTop: 9 }}>
+                  <div style={{ marginTop: 9, display: "flex", flexWrap: "wrap", gap: 7 }}>
                     {i.status === "completed" ? (
                       <button className="rc-btnsm ghost" onClick={() => setViewing(i)}>
                         View scorecard
                       </button>
-                    ) : (
-                      canWork && (
+                    ) : i.status === "scheduled" && canWork ? (
+                      <>
                         <button className="rc-btnsm" onClick={() => setScoring(i)}>
                           Score this interview
                         </button>
-                      )
-                    )}
+                        <button className="rc-btnsm ghost" onClick={() => openReschedule(i)}>
+                          Reschedule
+                        </button>
+                        <button
+                          className="rc-btnsm ghost"
+                          disabled={busy}
+                          onClick={() => act({ action: "closeInterview", interviewId: i.id, outcome: "no_show" })}
+                        >
+                          No Show Interview
+                        </button>
+                        <button
+                          className="rc-btnsm ghost"
+                          disabled={busy}
+                          onClick={() => act({ action: "closeInterview", interviewId: i.id, outcome: "canceled" })}
+                        >
+                          Candidate Canceled Interview
+                        </button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               ))
@@ -211,7 +261,7 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
               <div className="rc-empty">No interviews yet.</div>
             )}
             {canWork && candidate.stage !== "hired" && (
-              <button className="rc-btnsm ghost" style={{ marginTop: 4 }} onClick={() => setSchedOpen(true)}>
+              <button className="rc-btnsm ghost" style={{ marginTop: 4 }} onClick={openSchedule}>
                 + Schedule interview
               </button>
             )}
@@ -257,13 +307,13 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
         </div>
       </div>
 
-      {schedOpen && (
+      {(schedOpen || rescheduling) && (
         <Modal
-          title="Schedule interview"
-          onClose={() => setSchedOpen(false)}
+          title={rescheduling ? "Reschedule interview" : "Schedule interview"}
+          onClose={closeSchedule}
           footer={
             <>
-              <button className="rc-btnsm ghost" onClick={() => setSchedOpen(false)} disabled={busy}>
+              <button className="rc-btnsm ghost" onClick={closeSchedule} disabled={busy}>
                 Cancel
               </button>
               <button
@@ -272,24 +322,29 @@ export default function CandidateDrawer({ candidate, classes, people, canWork, o
                 onClick={() =>
                   act(
                     {
-                      action: "scheduleInterview",
+                      action: rescheduling ? "rescheduleInterview" : "scheduleInterview",
+                      ...(rescheduling ? { interviewId: rescheduling.id } : {}),
                       type: iv.type,
                       date: iv.date,
                       time: iv.time,
                       interviewerUid: iv.interviewerUid || interviewers[0]?.uid || "",
                     },
-                    () => setSchedOpen(false)
+                    closeSchedule
                   )
                 }
               >
-                Schedule
+                {rescheduling ? "Save changes" : "Schedule"}
               </button>
             </>
           }
         >
           <p className="rc-note" style={{ marginTop: 0, marginBottom: 14 }}>
             {candidate.name} · {candidate.role}
-            {scheduled.length ? ` — already has ${scheduled.length} scheduled` : ""}
+            {rescheduling
+              ? ` — moving the ${INTERVIEW_LABEL[rescheduling.type]} booked for ${fmtDT(rescheduling.datetime)}`
+              : scheduled.length
+              ? ` — already has ${scheduled.length} scheduled`
+              : ""}
           </p>
           <div className="rc-f2">
             <div className="field">

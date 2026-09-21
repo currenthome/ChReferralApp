@@ -37,6 +37,10 @@ function describe(r) {
       return d.classId ? `moved ${who} to a different class` : `took ${who} out of their class`;
     case "v2.interview.schedule":
       return `scheduled a ${d.type} interview with ${who} for ${d.when} with ${d.interviewer}`;
+    case "v2.interview.reschedule":
+      return `moved ${who}'s interview — was ${d.was}, now ${d.now}`;
+    case "v2.interview.close":
+      return `marked ${who}'s ${d.type} interview on ${d.when} as ${d.outcome}`;
     case "v2.interview.score":
       return `scored ${who}'s ${d.type} interview${d.score != null ? ` — ${d.score}/10` : ""}${
         d.quals ? `, ${d.quals} quals met` : ""

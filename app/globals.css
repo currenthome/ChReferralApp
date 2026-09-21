@@ -195,6 +195,7 @@ body.hasbar{padding-bottom:76px;}
 .rc-stage.s-offer_accepted{background:#e8f0ff;color:#2b4b9b;}
 .rc-stage.s-hired{background:#e5f7ea;color:#1e7d34;}
 .rc-stage.s-rejected{background:#fdeceb;color:#a33527;}
+.rc-stage.s-offer_rejected{background:#fdeceb;color:#a33527;}
 .rc-cols{display:flex;flex-direction:column;gap:14px;}
 .rc-col{background:#fff;border:1px solid var(--gray);border-radius:14px;padding:12px 14px;}
 .rc-colhead{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;margin-bottom:10px;}

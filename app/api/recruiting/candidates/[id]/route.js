@@ -8,6 +8,8 @@ import {
   STAGE_LABEL,
   INTERVIEW_TYPES,
   INTERVIEW_LABEL,
+  INTERVIEW_CLOSED,
+  INTERVIEW_CLOSED_LABEL,
   isDateOnly,
   referrerDepts,
   formKey,
@@ -22,10 +24,12 @@ import { getV2Config } from "../../config/route";
 // from an accepted offer, so nobody is marked hired before they've said yes.
 const ALLOWED_MOVES = {
   interviewing: ["offer_extended", "on_hold", "rejected"],
-  offer_extended: ["offer_accepted", "on_hold", "rejected"],
-  offer_accepted: ["hired", "rejected"],
+  offer_extended: ["offer_accepted", "on_hold", "rejected", "offer_rejected"],
+  offer_accepted: ["hired", "rejected", "offer_rejected"],
   on_hold: ["interviewing", "rejected"],
   rejected: ["interviewing"],
+  // Turning us down isn't final either — people come back.
+  offer_rejected: ["interviewing"],
   hired: [],
 };
 
@@ -251,7 +255,9 @@ export async function POST(request, { params }) {
   }
 
   if (action === "scheduleInterview") {
-    if (candidate.stage === "rejected") return jsonError("Reopen this candidate first.");
+    if (["rejected", "offer_rejected"].includes(candidate.stage)) {
+      return jsonError("Reopen this candidate first.");
+    }
     if (!INTERVIEW_TYPES.includes(body.type)) return jsonError("Pick an interview type.");
     if (!isDateOnly(body.date)) return jsonError("Pick a date.");
     if (!/^\d{2}:\d{2}$/.test(String(body.time || ""))) return jsonError("Pick a time.");
@@ -291,6 +297,85 @@ export async function POST(request, { params }) {
     });
   }
 
+  // Times move. The interview keeps its identity and simply takes the new
+  // details — one interview that moved, not two that were booked.
+  if (action === "rescheduleInterview") {
+    const ivId = String(body.interviewId || "").trim();
+    if (!ivId) return jsonError("Which interview?");
+    const ivRef = ref.collection("interviews").doc(ivId);
+    const ivSnap = await ivRef.get();
+    if (!ivSnap.exists) return jsonError("Interview not found", 404);
+    const iv = ivSnap.data();
+    if (iv.status !== "scheduled") return jsonError("That interview is already closed out.");
+
+    if (!INTERVIEW_TYPES.includes(body.type)) return jsonError("Pick an interview type.");
+    if (!isDateOnly(body.date)) return jsonError("Pick a date.");
+    if (!/^\d{2}:\d{2}$/.test(String(body.time || ""))) return jsonError("Pick a time.");
+
+    const whoUid = String(body.interviewerUid || "").trim();
+    if (!whoUid) return jsonError("Pick who's interviewing.");
+    const whoSnap = await db.collection("users").doc(whoUid).get();
+    if (!whoSnap.exists) return jsonError("That interviewer no longer exists.");
+
+    await ivRef.update({
+      type: body.type,
+      datetime: `${body.date}T${body.time}`,
+      interviewerUid: whoUid,
+      interviewerName: whoSnap.data().name || "",
+    });
+
+    // The old time is gone from the record, so the audit trail is where it
+    // stays — that's what answers "this has moved three times".
+    await audit(db, user, "v2.interview.reschedule", id, {
+      name: candidate.name,
+      dept: candidate.dept,
+      was: `${INTERVIEW_LABEL[iv.type]} ${iv.datetime.replace("T", " ")} with ${iv.interviewerName}`,
+      now: `${INTERVIEW_LABEL[body.type]} ${body.date} ${body.time} with ${whoSnap.data().name || ""}`,
+      interviewId: ivId,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: `Moved to ${body.date} ${body.time} with ${whoSnap.data().name}.`,
+    });
+  }
+
+  // A scheduled interview that never happened. It closes with what went wrong
+  // instead of a score, so it stops showing as still to come.
+  if (action === "closeInterview") {
+    const ivId = String(body.interviewId || "").trim();
+    if (!ivId) return jsonError("Which interview?");
+    const outcome = String(body.outcome || "");
+    if (!INTERVIEW_CLOSED.includes(outcome)) return jsonError("Pick what happened.");
+
+    const ivRef = ref.collection("interviews").doc(ivId);
+    const ivSnap = await ivRef.get();
+    if (!ivSnap.exists) return jsonError("Interview not found", 404);
+    const iv = ivSnap.data();
+    if (iv.status !== "scheduled") return jsonError("That interview is already closed out.");
+
+    await ivRef.update({
+      status: outcome,
+      closedAt: new Date().toISOString(),
+      closedByUid: user.uid,
+      closedByName: user.name,
+    });
+
+    await audit(db, user, "v2.interview.close", id, {
+      name: candidate.name,
+      dept: candidate.dept,
+      type: INTERVIEW_LABEL[iv.type],
+      when: iv.datetime.replace("T", " "),
+      outcome: INTERVIEW_CLOSED_LABEL[outcome],
+      interviewId: ivId,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: `${candidate.name} — ${INTERVIEW_CLOSED_LABEL[outcome]}.`,
+    });
+  }
+
   if (action === "scoreInterview") {
     const ivId = String(body.interviewId || "").trim();
     if (!ivId) return jsonError("Which interview?");
@@ -300,7 +385,7 @@ export async function POST(request, { params }) {
     const iv = ivSnap.data();
     // Scored once. A finished scorecard is the record of what happened in that
     // room, so it isn't overwritten later.
-    if (iv.status === "completed") return jsonError("That interview is already scored.");
+    if (iv.status !== "scheduled") return jsonError("That interview is already closed out.");
 
     const formSnap = await db
       .collection("scorecardForms")

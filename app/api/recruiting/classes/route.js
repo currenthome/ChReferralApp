@@ -32,7 +32,7 @@ export async function GET(request) {
         attached: mine.length,
         seats: seatState(mine, c.target),
         candidates: mine
-          .filter((p) => p.stage !== "rejected")
+          .filter((p) => !["rejected", "offer_rejected"].includes(p.stage))
           .map((p) => ({
             id: p.id,
             name: p.name,
